@@ -158,13 +158,15 @@ public abstract class Strixa2DCanvas extends StrixaGLCanvas implements MouseMoti
     }
     
     protected void _drawChildren(GL2 gl){
-        if(this.getChildren().size()==0){
+        final List<Strixa2DElement> children = this.getChildren();
+        final int                   child_count = children.size();
+        final GLU                   glu = new GLU();
+        
+        
+        if(child_count==0){
             return;
         }
         
-        final List<Strixa2DElement> children = this.getChildren();
-        final GLU                   glu = new GLU();
-
         
         gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
@@ -194,10 +196,10 @@ public abstract class Strixa2DCanvas extends StrixaGLCanvas implements MouseMoti
         
         /*Draw the models!*/
         synchronized(children){
-            for(Strixa2DElement child:children){
-                if(child.isVisible(this.getStrixaGLContext())){
+            for(int index = 0;index<child_count;index++){
+                if(children.get(index).isVisible(this.getStrixaGLContext())){
                     gl.glPushMatrix();                    
-                        child.draw(gl);
+                        children.get(index).draw(gl);
                     gl.glPopMatrix();
                 }
             }

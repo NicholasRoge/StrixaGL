@@ -22,10 +22,11 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     /** Field needed for the serialization of this object. */
     private static final long serialVersionUID = -6426147154592668101L;
     
-    private double          __aspect_ratio;
-    private StrixaGLContext __context;
-    private boolean         __exiting;
-    private Thread          __gui_thread;
+    private final StrixaGLContext __context = new StrixaGLContext();
+    
+    private double  __aspect_ratio;
+    private boolean __exiting;
+    private Thread  __gui_thread;
     
     
     /*Begin Constructors*/
@@ -38,11 +39,14 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     public StrixaGLCanvas(GLCapabilities capabilities,double aspect_ratio){
         super(capabilities);
         
-
-        this.addGLEventListener(this);
         
         this.__exiting=false;
+        this.__gui_thread = new Thread(this);
         this.setAspectRatio(aspect_ratio);
+        this.setFPS(30);
+        
+        
+        this.addGLEventListener(this);
     }
     /*End Constructors*/
     
@@ -70,11 +74,7 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
      * 
      * @return The thread that the GUI is running in.
      */
-    public Thread getGUIThread(){
-        if(this.__gui_thread == null){
-            this.__gui_thread = new Thread(this);
-        }
-        
+    public Thread getGUIThread(){        
         return this.__gui_thread;
     }
     
@@ -83,11 +83,7 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
      * 
      * @return The canvas' current context.
      */
-    public StrixaGLContext getStrixaGLContext(){
-        if(this.__context == null){
-            this.__context = new StrixaGLContext();
-        }
-        
+    public StrixaGLContext getStrixaGLContext(){        
         return this.__context;
     }
     
@@ -140,7 +136,7 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
         long start_time = -1;
         long time_taken = -1;
         
-        
+       
         while(!this.__exiting){
             start_time = System.currentTimeMillis();
             period = 1000 / this.getFPS();

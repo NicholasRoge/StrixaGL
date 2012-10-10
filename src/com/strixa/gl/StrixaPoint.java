@@ -22,9 +22,10 @@ public class StrixaPoint{
     
     private final List<StrixaPointLocationUpdateListener> __location_update_listeners = new ArrayList<StrixaPointLocationUpdateListener>();
     
-    private Byte            __alpha; 
-    private Color           __colour;
-    private Point3D<Double> __coordinates;
+    private final Point3D<Double> __coordinates  = new Point3D<Double>(0.0,0.0,0.0);
+    
+    private Byte  __alpha; 
+    private Color __colour;
     
 
     /*Begin Constructors*/
@@ -146,15 +147,11 @@ public class StrixaPoint{
     public void setCoordinates(double x_coordinate,double y_coordinate,double z_coordinate){
         this.__coordinates.setPoint(x_coordinate,y_coordinate,z_coordinate);
         
-        new Thread(new Runnable(){
-            public void run(){
-                synchronized(StrixaPoint.this.__location_update_listeners){
-                    for(StrixaPointLocationUpdateListener listener:StrixaPoint.this.__location_update_listeners){
-                        listener.onStrixaPointLocationUpdate(StrixaPoint.this);
-                    }
-                }
+        synchronized(StrixaPoint.this.__location_update_listeners){
+            for(StrixaPointLocationUpdateListener listener:StrixaPoint.this.__location_update_listeners){
+                listener.onStrixaPointLocationUpdate(StrixaPoint.this);
             }
-        }).start();
+        }
     }
     /*End Getter/Setters*/
     

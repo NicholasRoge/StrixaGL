@@ -5,6 +5,7 @@
 package com.strixa.gl;
 
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +16,6 @@ import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.glu.GLU;
 
 import com.strixa.gl.properties.Cuboid;
-import com.strixa.util.Dimension2D;
-import com.strixa.util.Point2D;
 import com.strixa.util.Point3D;
 
 /**
@@ -24,11 +23,12 @@ import com.strixa.util.Point3D;
  *
  * @author Nicholas Rogé
  */
-public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMotionListener{
+public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMotionListener,MouseListener{
     /** Field needed for the serialization of this object. */
     private static final long serialVersionUID = 7940290686156245285L;
     
     private final Point3D<Double> __camera_location = new Point3D<Double>(0.0,0.0,0.0);
+    private final Point3D<Double> __camera_looking_at_point = new Point3D<Double>(0.0,0.0,1.0);
     
     private double                __camera_pitch;
     private double                __camera_rotation;
@@ -48,36 +48,66 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         super(capabilities,aspect_ratio);
         
         
-      //this.addMouseListener(this);
+        this.addMouseListener(this);
         this.addMouseMotionListener(this);
         this.setCamera(0,0,0);
+        this.setRenderDistance(100);
         
         this._refreshViewableArea();
+        this._refreshCamera();
     }
     /*End Constructors*/
     
-    /*Begin Overridden Methods*/    
+    /*Begin Overridden Methods*/ 
+    @Override public void init(GLAutoDrawable drawable){
+        super.init(drawable);
+        
+        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHTING);
+        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHT0);
+    }
+    
     @Override public void reshape(GLAutoDrawable drawable,int x,int y,int width,int height){
         super.reshape(x,y,width,height);
         
         this.setAspectRatio((double)width/(double)height);
         this._refreshViewableArea();
+        this._refreshCamera();
     }
     /*End Overridden Methods*/
     
-    /*Begin Getter/Setter Methods*/    
+    /*Begin Getter/Setter Methods*/
+    /**
+     * Gets the camera's pitch value.
+     * 
+     * @return The camera's pitch value.  This will always be a positive number between 0 and 360.
+     */
     public double getCameraPitch(){
         return this.__camera_pitch;
     }
     
+    /**
+     * Gets the camera's rotation value.
+     * 
+     * @return The camera's rotation value.  This will always be a positive number between 0 and 360.
+     */
     public double getCameraRotation(){
         return this.__camera_rotation;
     }
     
+    /**
+     * Gets the camera's tilt value.
+     * 
+     * @return The camera's tilt value.  This will always be a positive number between 0 and 360.
+     */
     public double getCameraTilt(){
         return this.__camera_tilt;
     }
     
+    /**
+     * Gets the number of units in the z direction that the canvas will render elements.
+     * 
+     * @return The number of units in the z direction that the canvas will render elements.
+     */
     public double getRenderDistance(){
         return this.__render_distance;
     }
@@ -95,22 +125,66 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         return this.__children;
     }
     
+    /**
+     * Sets various aspects of the camera.
+     * 
+     * @param pitch Amount of pitch the camera should take on.
+     * @param rotation Amount the camera should be rotated.
+     * @param tilt Amount the camera should be tilted.
+     */
     public void setCamera(double pitch,double rotation,double tilt){
-        this.setCameraPitch(pitch);
-        this.setCameraRotation(rotation);
-        this.setCameraTilt(tilt);
-    }
-    
-    public void setCameraPitch(double pitch){
         this.__camera_pitch = pitch;
-    }
-    
-    public void setCameraRotation(double rotation){
         this.__camera_rotation = rotation;
+        this.__camera_tilt = tilt;
+        
+        this._refreshCamera();
     }
     
+    
+    /**
+     * Rotates the camera around the Y axis.
+     * 
+     * @param pitch  Amount of pitch the camera should take on.<br />
+     * <strong>Note:</strong>  If this value is less than 0, its value will become (360 + (360 % pitch)), and if the pitch value exceeds 360, it will become (360 % pitch).
+     */
+    public void setCameraPitch(double pitch){
+        pitch = pitch % 360;  //This ensures the value I get is between 0 and 360
+        if(pitch < 0){
+            pitch = 360 + pitch;
+        }
+        
+        this.setCamera(pitch,this.getCameraRotation(),this.getCameraTilt());
+    }
+    
+    /**
+     * Rotates the camera around the Y axis.
+     * 
+     * @param rotation Amount the camera should be rotated.<br />
+     * <strong>Note:</strong>  If this value is less than 0, its value will become (360 + (360 % rotation)), and if the rotation value exceeds 360, it will become (360 % rotation).
+     */
+    public void setCameraRotation(double rotation){
+        rotation = rotation % 360;  //This ensures the value I get is between 0 and 360.
+        if(rotation < 0){
+            rotation = 360 + rotation;  //And this ensures the value is positive.
+        }
+        
+        
+        this.setCamera(this.getCameraPitch(),rotation,this.getCameraTilt());
+    }
+    
+    /**
+     * Tilts the camera, rotating it around the around the Z axis.  (Relative to where you're looking) 
+     * 
+     * @param tilt Amount the camera should be tilted.<br />
+     * <strong>Note:</strong>  If this value is less than 0, its value will become (360 + (360 % tilt)), and if the tilt value exceeds 360, it will become (360 % tilt).
+     */
     public void setCameraTilt(double tilt){
-        this.__camera_tilt = tilt;
+        tilt = tilt % 360;  //This ensures the value I get is between 0 and 360.
+        if(tilt < 0){
+            tilt = 360 + tilt;  //And this ensures the value is positive.
+        }
+        
+        this.setCamera(this.getCameraPitch(),this.getCameraRotation(),tilt);
     }
     
     /**
@@ -142,12 +216,14 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
     }
     
     protected void _drawChildren(GL2 gl){
-        if(this.getChildren().size()==0){
-            return;
-        }
+        final List<Strixa3DElement> children = this.getChildren();      
+        final int                   child_count = children.size();
+        final GLU                   glu = new GLU(); 
         
-        final List<Strixa3DElement> children = this.getChildren();
-        final GLU                   glu = new GLU();        
+                
+        if(child_count == 0){
+            return;
+        }        
         
         
         gl.glMatrixMode(GL2.GL_PROJECTION);
@@ -156,8 +232,8 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         glu.gluPerspective(
             90,
             this.getAspectRatio(),
-            this.__render_distance,
-            this.__render_distance
+            this.getRenderDistance(),
+            1
         );
         glu.gluLookAt(
             //Camera Location
@@ -165,23 +241,26 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
             this.__camera_location.getY(),
             this.__camera_location.getZ(),
             //Looking at what?
-            this.__camera_location.getX()+(Math.cos((this.getCameraRotation()*Math.PI)/180)*Math.sin((this.getCameraPitch()*Math.PI)/360)),
-            this.__camera_location.getY()+(Math.sin((this.getCameraRotation()*Math.PI)/180)*Math.cos((this.getCameraPitch()*Math.PI)/360)),
-            this.__camera_location.getX()+Math.cos((this.getCameraPitch()*Math.PI)/360),
+            this.__camera_looking_at_point.getX(),
+            this.__camera_looking_at_point.getY(),
+            this.__camera_looking_at_point.getZ(),
             //Where is up?
             0,
             1,
             0
         );
+
         
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         
+        
+        
         /*Draw the models!*/
         synchronized(children){
-            for(Strixa3DElement child:children){
-                if(child.isVisible(this.getStrixaGLContext())){
+            for(int index = 0;index<child_count;index++){
+                if(children.get(index).isVisible(this.getStrixaGLContext())){
                     gl.glPushMatrix();                    
-                        child.draw(gl);
+                        children.get(index).draw(gl);
                     gl.glPopMatrix();
                 }
             }
@@ -190,13 +269,19 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         this.swapBuffers();
     }
     
-    public void mouseDragged(MouseEvent event){
-        System.out.println("Mouse Dragged");
-    }
+    public void mouseClicked(MouseEvent event){}
     
-    public void mouseMoved(MouseEvent event){
-        System.out.println("Mouse Moved");
-    }
+    public void mouseDragged(MouseEvent event){}
+    
+    public void mouseEntered(MouseEvent event){}
+    
+    public void mouseExited(MouseEvent event){}
+    
+    public void mouseMoved(MouseEvent event){}
+    
+    public void mousePressed(MouseEvent event){}
+    
+    public void mouseReleased(MouseEvent event){}
     
     protected void _refreshViewableArea(){        
         final double half_render_distance = this.__render_distance/2;
@@ -208,10 +293,16 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
                 this.__camera_location.getY() - half_render_distance,
                 this.__camera_location.getZ() - half_render_distance
             ),
-            half_render_distance,
-            half_render_distance,
-            half_render_distance
+            this.__render_distance,
+            this.__render_distance,
+            this.__render_distance
         ));
+    }
+    
+    protected void _refreshCamera(){
+        this.__camera_looking_at_point.setX(this.__camera_location.getX()+(Math.sin((this.getCameraRotation()*Math.PI)/180)*Math.cos((this.getCameraPitch()*Math.PI)/180)));
+        this.__camera_looking_at_point.setY(this.__camera_location.getY()+(Math.sin((this.getCameraRotation()*Math.PI)/180)*Math.sin((this.getCameraPitch()*Math.PI)/180)));
+        this.__camera_looking_at_point.setZ(this.__camera_location.getZ()+(Math.cos((this.getCameraRotation()*Math.PI)/180)));
     }
     
     /**
@@ -219,7 +310,7 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
      * 
      * @param child Child to be removed from the canvas.
      */
-    public void removeChild(StrixaGLElement child){
+    public void removeChild(Strixa3DElement child){
         final List<Strixa3DElement> children = this.getChildren();
         
         
@@ -233,13 +324,15 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
      * 
      * @param x_modification The number of units x which the viewing area should be shifted left or right.
      * @param y_modification The number of units y which the viewing area should be shifted up or down.
+     * @param z_modification The number of units z which the viewing area should be shifted forward or backwards.
      */
     public void shiftViewingArea(double x_modification,double y_modification,double z_modification){
-        this.__camera_location.setX(this.__camera_location.getX() - x_modification);
-        this.__camera_location.setY(this.__camera_location.getY() - y_modification);
-        this.__camera_location.setY(this.__camera_location.getZ() - z_modification);
+        this.__camera_location.setX(this.__camera_location.getX() + x_modification);
+        this.__camera_location.setY(this.__camera_location.getY() + y_modification);
+        this.__camera_location.setZ(this.__camera_location.getZ() + z_modification);
         
         this._refreshViewableArea();
+        this._refreshCamera();
     }
-    /*Begin Other Essential Methods*/
+    /*End Other Essential Methods*/
 }

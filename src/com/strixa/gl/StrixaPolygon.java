@@ -21,7 +21,7 @@ import com.strixa.util.Point3D;
  *
  * @author Nicholas Rogé
  */
-public abstract class StrixaPolygon implements StrixaPointLocationUpdateListener{
+public class StrixaPolygon implements StrixaPointLocationUpdateListener{
     public interface StrixaPolygonUpdateListener{
         public void onStrixaPolygonUpdate(StrixaPolygon polygon);
     }
@@ -125,8 +125,11 @@ public abstract class StrixaPolygon implements StrixaPointLocationUpdateListener
     }
     
     public void draw(GL2 gl){
-        final Point3D<Double> this_coordinates = this.getCoordinates();
+        final List<StrixaPoint> points = this.getPoints();
+        final int               point_count = points.size();
+        final Point3D<Double>   this_coordinates = this.getCoordinates();
         
+        float[]         colour = null;
         Point3D<Double> coordinates = null;
         
         gl.glPushMatrix();
@@ -148,28 +151,31 @@ public abstract class StrixaPolygon implements StrixaPointLocationUpdateListener
                 break;
         }
         
-        for(StrixaPoint point : this.__points){
-            coordinates = point.getCoordinates();
+        
+        colour = new float[3];
+        for(int index = 0;index < point_count;index++){
+            coordinates = points.get(index).getCoordinates();
+            points.get(index).getColour().getColorComponents(colour);
             
-            gl.glColor3fv(point.getColour().getColorComponents(new float[3]),point.getAlpha());
+            gl.glColor4f(colour[0],colour[1],colour[2],1f);
             gl.glVertex3d(coordinates.getX(),coordinates.getY(),coordinates.getZ());
         }
         gl.glEnd();
         gl.glPopMatrix();
+        
+        
     }
     
     protected void _notifiyStrixaPolygonUpdateListeners(){
-        new Thread(new Runnable(){
-            public void run(){
-                for(StrixaPolygonUpdateListener listener:StrixaPolygon.this.__update_listeners){
-                    listener.onStrixaPolygonUpdate(StrixaPolygon.this);
-                }
-            }
-        }).start();
+        for(StrixaPolygonUpdateListener listener:StrixaPolygon.this.__update_listeners){
+            listener.onStrixaPolygonUpdate(StrixaPolygon.this);
+        }
     }
     
     private void __regenerateBoundingBox(){
-        final Point3D<Double> this_coordinates = this.getCoordinates();
+        final List<StrixaPoint> points = this.getPoints();
+        final int               point_count = points.size();
+        final Point3D<Double>   this_coordinates = this.getCoordinates();
         
         Point3D<Double> coordinates = null;
         double          depth = 0.0;
@@ -182,8 +188,8 @@ public abstract class StrixaPolygon implements StrixaPointLocationUpdateListener
             height = this_coordinates.getY();
             depth = this_coordinates.getZ();
             
-            for(StrixaPoint point:this.getPoints()){
-                coordinates = point.getCoordinates();
+            for(int index = 0;index < point_count;index++){
+                coordinates = points.get(index).getCoordinates();
                 
                 
                 width = Math.max(width,coordinates.getX());
