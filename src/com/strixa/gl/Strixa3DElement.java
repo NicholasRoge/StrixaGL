@@ -22,96 +22,11 @@ import com.strixa.util.Point3D;
  *
  * @author Nicholas Rogé
  */
-public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpdateListener{
-    /**
-     * Runnable object which draws a certain number of polygons.  This object is meant to be used in a thread.
-     *
-     * @author Nicholas Rogé
-     */
-    public static class PolygonDrawer implements Runnable{
-        private List<StrixaPolygon> __components;
-        private boolean             __current_draw_finished;
-        private GL2                 __pipeline;
-        private int                 __num_polygons;
-        private int                 __start_index;
-        
-        
-        /*Begin Constructors*/
-        /**
-         * Creates a new runnable object which draws the given components.
-         * 
-         * @param pipeline Pipeline to which the components should be drawn.
-         * @param components Components to be drawn.
-         * @param start_index Index in the components list to start drawing from.
-         */
-        public PolygonDrawer(List<StrixaPolygon> components,int start_index){
-            if(components == null){
-                throw new NullPointerException("Argument 'components' must not be null.");
-            }else if(start_index >= components.size()){
-                throw new IllegalArgumentException("Argument 'start_index' must not be larger than the number of elements in the 'components' argument.");
-            }
-            
-            
-            this.__pipeline = null;
-            this.__components = components;
-            this.__start_index = start_index;
-            this.__num_polygons = Math.min(Strixa3DElement.POLYGON_PER_THREAD,this.__components.size() - this.__start_index - 1);
-            this.__current_draw_finished = false;
-        }
-        /*End Constructors*/
-        
-        /*Begin Other Essential Methods*/
-        public boolean currentDrawFinished(){
-            return this.__current_draw_finished;
-        }
-        
-        public void run(){
-            final int end_index = this.__start_index + this.__num_polygons;
-            
-            
-            try{
-                synchronized(this){
-                    this.wait();  //This is needed so that a seperate clause isn't needed in the Strixa3DElement#draw method to start the this thread.
-                }
-            }catch(InterruptedException e){
-                
-            }
-            while(true){
-                this.__current_draw_finished = false;
-                
-                for(int index = this.__start_index;index <= end_index;index++){                
-                    this.__components.get(index).draw(this.__pipeline);
-                }
-                
-                this.__current_draw_finished = true;
-                try{
-                    synchronized(this){
-                        this.wait();
-                    }
-                }catch(InterruptedException e){
-                    
-                }
-            }
-        }
-        
-        public void updatePipeline(GL2 pipeline){
-            if(pipeline == null){
-                throw new NullPointerException("Argument 'pipeline' must not be null.");
-            }
-            
-            this.__pipeline = pipeline;
-        }
-        /*End Other Essential Methods*/
-    }
-    
-    public final static int POLYGON_PER_THREAD = 100000;
-    
+public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpdateListener{    
     private final List<StrixaPolygon> __components = new ArrayList<StrixaPolygon>();
     private final Point3D<Double>     __coordinates = new Point3D<Double>(0.0,0.0,0.0);
     
     private Cuboid          __bounding_box;
-    private PolygonDrawer[] __polygon_drawers;
-    private Thread[]        __polygon_drawer_threads;
     
     
     /*Begin Constructor*/
@@ -246,7 +161,6 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         }
         
         this._regenerateBoundingBox();
-        this._regenerateDrawerThreads();
     }
     
     public void draw(GL2 gl){
@@ -257,22 +171,11 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         
         gl.glPushMatrix();
         gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());        
-        for(int index = 0;index < this.__polygon_drawer_threads.length;index++){
-            this.__polygon_drawers[index].updatePipeline(gl);
-            synchronized(this.__polygon_drawers[index]){
-                this.__polygon_drawers[index].notify();
-            }
+        
+        for(int index = 0,end_index = this.__components.size();index < end_index;index++){                
+            this.__components.get(index).draw(gl);
         }
         
-        for(int index = 0;index < this.__polygon_drawer_threads.length;index++){
-            while(!this.__polygon_drawers[index].currentDrawFinished()){
-                try{
-                    Thread.sleep(0,10);
-                }catch(InterruptedException e){
-                    
-                }
-            }
-        }
         gl.glPopMatrix();
         
         System.out.println("Frame draw time:  " + (System.nanoTime() - start_time) + "ns");
@@ -399,22 +302,6 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
             height,
             depth
         );
-    }
-    
-    protected void _regenerateDrawerThreads(){
-        final List<StrixaPolygon> polygons = this.getComponents();
-        final int                 polygon_count = polygons.size();
-        final int                 thread_count = (int)Math.ceil(((double)polygon_count) / ((double)Strixa3DElement.POLYGON_PER_THREAD));
-        
-        
-        this.__polygon_drawers = new PolygonDrawer[thread_count];
-        this.__polygon_drawer_threads = new Thread[thread_count];
-        for(int index = 0;index < thread_count;index++){
-            this.__polygon_drawers[index] = new PolygonDrawer(polygons,index * Strixa3DElement.POLYGON_PER_THREAD);
-            this.__polygon_drawer_threads[index] = new Thread(this.__polygon_drawers[index],"polygon_draw_thread_"+index);
-            
-            this.__polygon_drawer_threads[index].start();
-        }
     }
     /*End Other Methods*/
 }

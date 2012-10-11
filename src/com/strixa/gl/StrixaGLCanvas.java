@@ -4,12 +4,18 @@
  */
 package com.strixa.gl;
 
+import com.jogamp.opengl.util.Animator;
+import com.jogamp.opengl.util.FPSAnimator;
 import com.strixa.util.Dimension2D;
 
 import javax.media.opengl.GL2;
+import javax.media.opengl.GLAnimatorControl;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCapabilities;
+import javax.media.opengl.GLDrawable;
+import javax.media.opengl.GLDrawableFactory;
 import javax.media.opengl.GLEventListener;
+import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 
 
@@ -18,15 +24,15 @@ import javax.media.opengl.awt.GLCanvas;
  *
  * @author Nicholas Rogé
  */
-public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener,Runnable{
+public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener{
     /** Field needed for the serialization of this object. */
     private static final long serialVersionUID = -6426147154592668101L;
     
+    private final FPSAnimator     __animator = new FPSAnimator(this,60);
     private final StrixaGLContext __context = new StrixaGLContext();
-    
+   
     private double  __aspect_ratio;
     private boolean __exiting;
-    private Thread  __gui_thread;
     
     
     /*Begin Constructors*/
@@ -41,16 +47,17 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
         
         
         this.__exiting=false;
-        this.__gui_thread = new Thread(this);
-        this.setAspectRatio(aspect_ratio);
-        this.setFPS(30);
-        
+        this.setAspectRatio(aspect_ratio);        
         
         this.addGLEventListener(this);
     }
     /*End Constructors*/
     
     /*Begin Getter/Setter Methods*/
+    public FPSAnimator getAnimator(){
+        return this.__animator;
+    }
+    
     /**
      * Gets the aspect ratio of this canvas.
      * 
@@ -70,15 +77,6 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     }
     
     /**
-     * Returns the thread that the GUI is running in.
-     * 
-     * @return The thread that the GUI is running in.
-     */
-    public Thread getGUIThread(){        
-        return this.__gui_thread;
-    }
-    
-    /**
      * Gets the canvas' current context.
      * 
      * @return The canvas' current context.
@@ -90,19 +88,12 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     public void setAspectRatio(double aspect_ratio){
         this.__aspect_ratio = aspect_ratio;
     }
-    
-    /**
-     * Sets the maximum number of frames that are displayed in a second.
-     * 
-     * @param fps The frames to be displayed in a second.
-     */
-    public void setFPS(int fps){
-        this.__context.setCurrentFPS(fps);
-    }
     /*End Getter/Setter Methods*/
     
     /*Begin Other Methods*/  
-    public void display(GLAutoDrawable drawable){        
+    public void display(GLAutoDrawable drawable){   
+        this._performGameLogic(this.getStrixaGLContext());
+        
         /*Clear everything up.*/
         drawable.getGL().glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
         
@@ -120,43 +111,16 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
         gl.glEnable(GL2.GL_DEPTH_TEST);
         gl.glDepthFunc(GL2.GL_LEQUAL);
         gl.glClearColor(0f,0f,0f,1f);
+        gl.setSwapInterval(1);
         
         
         /*Set up and start the game thread*/
-        this.getGUIThread().start();
+        this.__animator.add(this);
+        this.__animator.start();
     }
     
     public void reshape(GLAutoDrawable drawable,int x,int y,int width,int height){
         drawable.getGL().glViewport(x,y,width,height);
-    }
-    
-    public void run(){
-        long period = -1;
-        long sleep_time = -1;
-        long start_time = -1;
-        long time_taken = -1;
-        
-       
-        while(!this.__exiting){
-            start_time = System.currentTimeMillis();
-            period = 1000 / this.getFPS();
-            
-            this._performGameLogic(this.getStrixaGLContext());
-            this.display();
-
-            time_taken = System.currentTimeMillis() - start_time;
-            sleep_time = period-time_taken;
-            
-            try{
-                if(sleep_time>0){
-                    Thread.sleep(sleep_time);  //If sleep time is less than or equal to 0, we may as well not even sleep.
-                }
-            }catch(InterruptedException e){
-                System.out.println("Thread interrupted for some reason.");  //TODO:  Oh yeah...  That's a really helpful message you have there.  What do you THINK the todo is for?
-            }
-        }
-        
-        return;
     }
     
     /**
