@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.media.opengl.GL2;
+import javax.media.opengl.GLContext;
 
 import com.strixa.gl.StrixaPolygon.StrixaPolygonUpdateListener;
 import com.strixa.gl.properties.Cuboid;
@@ -23,10 +24,13 @@ import com.strixa.util.Point3D;
  * @author Nicholas Rogé
  */
 public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpdateListener{    
+    private static int __assigned_list_count = 0;
+    
     private final List<StrixaPolygon> __components = new ArrayList<StrixaPolygon>();
     private final Point3D<Double>     __coordinates = new Point3D<Double>(0.0,0.0,0.0);
     
     private Cuboid          __bounding_box;
+    private Integer         __list_index;
     
     
     /*Begin Constructor*/
@@ -164,21 +168,26 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
     }
     
     public void draw(GL2 gl){
-        long start_time = System.nanoTime();
-        
         final Point3D<Double> this_coordinates = this.getCoordinates();
         
-        
-        gl.glPushMatrix();
-        gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());        
-        
-        for(int index = 0,end_index = this.__components.size();index < end_index;index++){                
-            this.__components.get(index).draw(gl);
+        if(this.__list_index == null){
+            this.__list_index = gl.glGenLists(1);
+            gl.glNewList(this.__list_index,GL2.GL_COMPILE);
+            
+            gl.glPushMatrix();
+            gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());        
+            
+            for(int index = 0,end_index = this.__components.size();index < end_index;index++){                
+                this.__components.get(index).draw(gl);
+            }
+            
+            gl.glPopMatrix();
+            
+            gl.glEndList();
         }
         
-        gl.glPopMatrix();
         
-        System.out.println("Frame draw time:  " + (System.nanoTime() - start_time) + "ns");
+        gl.glCallList(this.__list_index);
     }
     
     /**
@@ -304,4 +313,15 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         );
     }
     /*End Other Methods*/
+    
+    /*Begin Static Methods*/
+    public static int getNewListIndex(){
+        final int index = Strixa3DElement.__assigned_list_count;
+        
+        
+        Strixa3DElement.__assigned_list_count++;
+        
+        return index;
+    }
+    /*End Static Methods*/
 }

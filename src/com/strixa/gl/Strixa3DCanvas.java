@@ -215,6 +215,18 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         }
     }
     
+    public void advanceCamera(double units){
+        if(units==0){
+            return;
+        }
+        
+        this.shiftViewingArea(
+            units * Math.sin((this.getCameraRotation() * Math.PI) / 180),
+            0,
+            units * Math.cos((this.getCameraRotation() * Math.PI) / 180)
+        );
+    }
+    
     protected void _drawChildren(GL2 gl){
         final List<Strixa3DElement> children = this.getChildren();      
         final int                   child_count = children.size();
@@ -265,8 +277,6 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
                 }
             }
         }
-        
-        this.swapBuffers();
     }
     
     public void mouseClicked(MouseEvent event){}
@@ -300,9 +310,11 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
     }
     
     protected void _refreshCamera(){
-        this.__camera_looking_at_point.setX(this.__camera_location.getX()+(Math.sin((this.getCameraRotation()*Math.PI)/180)*Math.cos((this.getCameraPitch()*Math.PI)/180)));
-        this.__camera_looking_at_point.setY(this.__camera_location.getY()+(Math.sin((this.getCameraRotation()*Math.PI)/180)*Math.sin((this.getCameraPitch()*Math.PI)/180)));
-        this.__camera_looking_at_point.setZ(this.__camera_location.getZ()+(Math.cos((this.getCameraRotation()*Math.PI)/180)));
+        //TODO_HIGH:  Get this method hooked up with some actual measurements...
+        
+        this.__camera_looking_at_point.setX(this.__camera_location.getX()+Math.sin((this.getCameraRotation()*Math.PI)/180));
+        this.__camera_looking_at_point.setY(0.0);
+        this.__camera_looking_at_point.setZ(this.__camera_location.getZ()+Math.cos((this.getCameraRotation()*Math.PI)/180));
     }
     
     /**
@@ -333,6 +345,18 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         
         this._refreshViewableArea();
         this._refreshCamera();
+    }
+    
+    public void strafeCamera(double units){
+        if(units==0){
+            return;
+        }
+        
+        this.shiftViewingArea(
+            units * Math.sin(((this.getCameraRotation() + 90) * Math.PI) / 180),
+            0,
+            units * Math.cos(((this.getCameraRotation() + 90) * Math.PI) / 180)
+        );
     }
     /*End Other Essential Methods*/
 }
