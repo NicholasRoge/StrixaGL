@@ -62,8 +62,14 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
     @Override public void init(GLAutoDrawable drawable){
         super.init(drawable);
         
-        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHTING);
-        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHT0);
+        drawable.getGL().getGL2().glEnable(GL2.GL_DEPTH_TEST);
+        drawable.getGL().getGL2().glDepthFunc(GL2.GL_LESS);
+        
+        drawable.getGL().getGL2().glShadeModel(GL2.GL_SMOOTH);
+        drawable.getGL().getGL2().glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT,GL2.GL_NICEST);
+        drawable.getGL().getGL2().glClearColor(0f,0f,0f,1f);
+        
+        
     }
     
     @Override public void reshape(GLAutoDrawable drawable,int x,int y,int width,int height){
@@ -236,6 +242,17 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         if(child_count == 0){
             return;
         }        
+        
+        /*gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_AMBIENT,new float[]{.2f,.2f,.2f,1f},0);
+        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_SPECULAR,new float[]{.8f,.8f,.8f,1f},0);
+        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_POSITION,new float[]{0f,20f,0f,1f},0);
+        
+        gl.glEnable(GL2.GL_LIGHT0);
+        gl.glEnable(GL2.GL_LIGHTING);
+        
+        gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_AMBIENT,new float[]{.3f,.5f,.1f,1f},0);
+        gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_SPECULAR,new float[]{.3f,.5f,.1f,1f},0);
+        gl.glMaterialf(GL2.GL_FRONT,GL2.GL_SHININESS,.5f);*/
         
         
         gl.glMatrixMode(GL2.GL_PROJECTION);

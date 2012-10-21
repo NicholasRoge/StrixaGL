@@ -4,11 +4,8 @@
  */
 package com.strixa.gl;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.media.opengl.GL2;
 
 import com.strixa.gl.StrixaPoint.StrixaPointLocationUpdateListener;
 import com.strixa.gl.properties.Cuboid;
@@ -22,23 +19,34 @@ import com.strixa.util.Point3D;
  * @author Nicholas Rogé
  */
 public class StrixaPolygon implements StrixaPointLocationUpdateListener{
+    /**
+     * Classes wishing to receive updates from this polygon should implement this interface.
+     *
+     * @author Nicholas Rogé
+     */
     public interface StrixaPolygonUpdateListener{
+        /**
+         * Called when a polygon performs an update.
+         * 
+         * @param polygon Polygon which has been updated.
+         */
         public void onStrixaPolygonUpdate(StrixaPolygon polygon);
     }
     
     private final Point3D<Double>                   __coordinates = new Point3D<Double>(0.0,0.0,0.0);
+    private final List<Point3D<Double>>             __normal_points = new ArrayList<Point3D<Double>>();
     private final List<StrixaPoint>                 __points = new ArrayList<StrixaPoint>();
+    final List<Point2D<Double>>                     __texture_points = new ArrayList<Point2D<Double>>();
     private final List<StrixaPolygonUpdateListener> __update_listeners = new ArrayList<StrixaPolygonUpdateListener>();
     
-    private Cuboid __bounding_box;
+    private Cuboid         __bounding_box;
     
     
     /*Begin Constructors*/
     /**
-     * Constructs the polygon
+     * Constructs the polygon.
      */
     public StrixaPolygon(){
-        super();
     }
     /*End Constructors*/
     
@@ -53,55 +61,58 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
     }
     
     /**
-     * Gets the list of StrixaPoints which this polygon is made up of.
+     * Gets the list of normal points associated with this object.<br />
      * 
-     * @return The list of StrixaPoints which this polygon is made up of.
+     * @return The list of normal points.
+     */
+    public List<Point3D<Double>> getNormalPoints(){
+        return this.__normal_points;
+    }
+    
+    /**
+     * Gets the list of coordinate points associated with this object.<br />
+     * 
+     * @return The list of coordinate points.
      */
     public List<StrixaPoint> getPoints(){
         return this.__points;
     }
     
     /**
-     * Sets the alpha property of this polygon.
+     * Gets the list of texture points associated with this object.<br />
+     * <strong>Note:</strong>  It's possible for this object to have no texture coordinates, in which case the list returned by this method will be empty.
      * 
-     * @param alpha Visibility of the polygon.  This should be a number between 0 (not visible) and 255 (fully visible).
+     * @return The list of texture points.
      */
-    public void setAlpha(byte alpha){
-        for(StrixaPoint point:this.__points){
-            point.setAlpha(alpha);
-        }
+    public List<Point2D<Double>> getTexturePoints(){
+        return this.__texture_points;
     }
     
     /**
-     * Sets this polygon's colour.
+     * Gets this polygon's current location.
      * 
-     * @param red Red component of this element's colour.  This should be a value between 0 and 1.
-     * @param green Green component of this element's colour.  This should be a value between 0 and 1.
-     * @param blue Blue component of this element's colour.  This should be a value between 0 and 1.
+     * @return This polygons's current location.
      */
-    public void setColour(float red,float green,float blue){
-        this.setColour(new Color(red,green,blue));
-    }
-    
-    /**
-     * Sets the polygon's colour.
-     * 
-     * @param colour Colour the polygon should be.
-     */
-    public void setColour(Color colour){        
-        for(StrixaPoint point:this.__points){
-            point.setColour(colour);
-        }
-    }
-    
     public Point3D<Double> getCoordinates(){
         return this.__coordinates;
     }
     
+    /**
+     * Changes this polygon's location.
+     * 
+     * @param coordinates Coordinates to move this polygon to.
+     */
     public void setCoordinates(Point3D<Double> coordinates){
         this.setCoordinates(coordinates.getX(),coordinates.getY(),coordinates.getZ());
     }
     
+    /**
+     * Changes this polygon's location.
+     * 
+     * @param x X coordinate.
+     * @param y Y coordinate.
+     * @param z Z coordinate.
+     */
     public void setCoordinates(double x,double y,double z){
         this.__coordinates.setPoint(x,y,z);
         
@@ -110,69 +121,164 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
     /*End Getter/Setter Methods*/
     
     /*Begin Other Methods*/
-    public void addPoint(StrixaPoint point){
-        if(!this.__points.contains(point)){
-            this.__points.add(point);
-            
-            this._notifiyStrixaPolygonUpdateListeners();
-        }
+    /**
+     * Adds a normal points to this polygon.
+     * 
+     * @param point Normal point to be added.
+     */
+    public void addNormalPoint(Point3D<Double> point){
+        this.__normal_points.add(point);
+        
+        this._notifiyStrixaPolygonUpdateListeners();
     }
     
+    /**
+     * Adds a list of normal points to this polygon. 
+     * 
+     * @param normal_points List of normal points to be added.
+     */
+    public void addNormalPoints(List<Point3D<Double>> normal_points){
+        this.__normal_points.addAll(normal_points);
+        
+        this._notifiyStrixaPolygonUpdateListeners();
+    }
+    
+    /**
+     * Adds a point to this polygon.
+     * 
+     * @param point Point to be added.
+     */
+    public void addPoint(StrixaPoint point){
+        this.__points.add(point);
+        
+        this._notifiyStrixaPolygonUpdateListeners();
+    }
+    
+    /**
+     * Adds a list of points to this polygon.
+     * 
+     * @param points Point list to be added.
+     */
+    public void addPoints(List<StrixaPoint> points){
+        this.__points.addAll(points);
+        
+        this._notifiyStrixaPolygonUpdateListeners();
+    }
+    
+    /**
+     * Adds a texture point to this polygon.
+     * 
+     * @param texture_point Texture point to be added.
+     */
+    public void addTexturePoint(Point2D<Double> texture_point){
+        this.__texture_points.add(texture_point);
+        
+        this._notifiyStrixaPolygonUpdateListeners();
+    }
+    
+    /**
+     * Adds a list of texture points to this polygon.
+     * 
+     * @param texture_points Texture points to be added.
+     */
+    public void addTexturePoints(List<Point2D<Double>> texture_points){
+        this.__texture_points.addAll(texture_points);
+        
+        this._notifiyStrixaPolygonUpdateListeners();
+    }
+    
+    /**
+     * Adds a listener to be called if anything happens to update this polygon.
+     * 
+     * @param listener Listener to be called.
+     */
     public void addStrixaPolygonUpdateListener(StrixaPolygonUpdateListener listener){
         if(!this.__update_listeners.contains(listener)){
             this.__update_listeners.add(listener);
         }
     }
     
-    public void draw(GL2 gl){
-        final List<StrixaPoint> points = this.getPoints();
-        final int               point_count = points.size();
-        final Point3D<Double>   this_coordinates = this.getCoordinates();
+    /**
+     * Simple check to determine whether this polygon is visible in the current context.
+     * 
+     * @param context The context in which the StrixaGL application is currently being run.
+     * 
+     * @return Returns true if this polygon is visible and should be drawn, and false, otherwise.
+     */
+    public boolean isVisible(StrixaGLContext context){
+        final Cuboid          bounding_box = this.getBoundingBox();
+        final Point3D<Double> bounding_box_coordinates = bounding_box.getCoordinates();
+        final Cuboid          viewable_area = context.getViewableArea();
         
-        float[]         colour = null;
-        Point3D<Double> coordinates = null;
         
-        gl.glPushMatrix();
-        gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());
-        
-        switch(this.__points.size()){
-            case 0:
-            case 1:
-            case 2:
-                throw new RuntimeException("You must add at least 3 points to a "+this.getClass().getName()+" in order for it to be drawn.");
-            case 3:
-                gl.glBegin(GL2.GL_TRIANGLES);
-                break;
-            case 4:
-                gl.glBegin(GL2.GL_QUADS);
-                break;
-            default:
-                gl.glBegin(GL2.GL_POLYGON);
-                break;
+        if(viewable_area.isPointInside(bounding_box_coordinates)){
+            return true;
+        }else if(viewable_area.isPointInside(new Point3D<Double>(
+            bounding_box_coordinates.getX() + bounding_box.getWidth(),
+            bounding_box_coordinates.getY(),
+            bounding_box_coordinates.getZ()
+        ))){
+            return true;
+        }else if(viewable_area.isPointInside(new Point3D<Double>(
+            bounding_box_coordinates.getX(),
+            bounding_box_coordinates.getY() + bounding_box.getHeight(),
+            bounding_box_coordinates.getZ()
+        ))){
+            return true;
+        }else if(viewable_area.isPointInside(new Point3D<Double>(
+            bounding_box_coordinates.getX(),
+            bounding_box_coordinates.getY(),
+            bounding_box_coordinates.getZ() + bounding_box.getDepth()
+        ))){
+            return true;
+        }else if(viewable_area.isPointInside(new Point3D<Double>(
+            bounding_box_coordinates.getX() + bounding_box.getWidth(),
+            bounding_box_coordinates.getY() + bounding_box.getHeight(),
+            bounding_box_coordinates.getZ()
+        ))){
+            return true;
+        }else if(viewable_area.isPointInside(new Point3D<Double>(
+            bounding_box_coordinates.getX(),
+            bounding_box_coordinates.getY() + bounding_box.getHeight(),
+            bounding_box_coordinates.getZ() + bounding_box.getDepth()
+        ))){
+            return true;
+        }else if(viewable_area.isPointInside(new Point3D<Double>(
+            bounding_box_coordinates.getX() + bounding_box.getWidth(),
+            bounding_box_coordinates.getY(),
+            bounding_box_coordinates.getZ() + bounding_box.getDepth()
+        ))){
+            return true;
+        }else if(viewable_area.isPointInside(new Point3D<Double>(
+            bounding_box_coordinates.getX() + bounding_box.getWidth(),
+            bounding_box_coordinates.getY() + bounding_box.getHeight(),
+            bounding_box_coordinates.getZ() + bounding_box.getDepth()
+        ))){
+            return true;
+        }else{        
+            return false;
         }
-        
-        
-        colour = new float[3];
-        for(int index = 0;index < point_count;index++){
-            coordinates = points.get(index).getCoordinates();
-            points.get(index).getColour().getColorComponents(colour);
-            
-            gl.glColor4f(colour[0],colour[1],colour[2],1f);
-            gl.glVertex3d(coordinates.getX(),coordinates.getY(),coordinates.getZ());
-        }
-        gl.glEnd();
-        gl.glPopMatrix();
-        
-        
     }
     
+    /**
+     * Notifies any listeners that there has been an update to this polygon.
+     */
     protected void _notifiyStrixaPolygonUpdateListeners(){
         for(StrixaPolygonUpdateListener listener:StrixaPolygon.this.__update_listeners){
             listener.onStrixaPolygonUpdate(StrixaPolygon.this);
         }
     }
     
-    private void __regenerateBoundingBox(){
+    public void onStrixaPointLocationUpdate(StrixaPoint point){
+        this._regenerateBoundingBox();
+        
+        this._notifiyStrixaPolygonUpdateListeners();
+    }
+    
+    /**
+     * Regenerates the element's bounding box.
+     */
+    protected void _regenerateBoundingBox(){
         final List<StrixaPoint> points = this.getPoints();
         final int               point_count = points.size();
         final Point3D<Double>   this_coordinates = this.getCoordinates();
@@ -210,6 +316,11 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
         );
     }
     
+    /**
+     * Removes the given point from this polygon.
+     * 
+     * @param point Point to remove.
+     */
     public void removePoint(StrixaPoint point){
         if(this.__points.contains(point)){
             this.__points.remove(point);
@@ -218,14 +329,17 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
         }
     }
     
+    /**
+     * Removes the requested listener from the update list.
+     * 
+     * @param listener Listener to be removed.
+     */
     public void removeStrixaPolygonUpdateListener(StrixaPolygonUpdateListener listener){
         if(this.__update_listeners.contains(listener)){
             this.__update_listeners.remove(listener);
         }
     }
-    /*End Other Methods*/
-    
-    /*Begin Abstract Methods*/
+
     /**
      * Sets the list of points for this polygon to draw.
      * 
@@ -234,12 +348,6 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
     protected void _setPoints(List<StrixaPoint> points){
         this.__points.clear();
         this.__points.addAll(points);
-    }
-    
-    public void onStrixaPointLocationUpdate(StrixaPoint point){
-        this.__regenerateBoundingBox();
-        
-        this._notifiyStrixaPolygonUpdateListeners();
     }
     /*End Abstract Methods*/
     
@@ -252,7 +360,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @return Returns true if this object is colliding with the given object, and false, otherwise. 
      */
-    public boolean isColliding(StrixaPolygon element){  //TODO_HIGH:  This method needs heavy optimization.  Rather than creating a bunch of new objects, a list could be crated, for example.
+    public boolean isColliding(StrixaPolygon element){  //TODO_HIGH:  This method needs heavy optimization.  Rather than creating a bunch of new objects, a list could be created, for example.        
         final int this_point_count = this.__points.size();
         final int element_point_count = element.__points.size();
         

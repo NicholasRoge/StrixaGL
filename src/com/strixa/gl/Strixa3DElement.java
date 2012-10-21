@@ -4,7 +4,7 @@
  */
 package com.strixa.gl;
 
-import java.awt.Color;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,8 +13,8 @@ import javax.media.opengl.GLContext;
 
 import com.strixa.gl.StrixaPolygon.StrixaPolygonUpdateListener;
 import com.strixa.gl.properties.Cuboid;
-import com.strixa.util.Dimension2D;
 import com.strixa.util.Dimension3D;
+import com.strixa.util.Point2D;
 import com.strixa.util.Point3D;
 
 
@@ -24,13 +24,12 @@ import com.strixa.util.Point3D;
  * @author Nicholas Rogé
  */
 public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpdateListener{    
-    private static int __assigned_list_count = 0;
+    private final List<StrixaPolygon>   __components = new ArrayList<StrixaPolygon>();
+    private final Point3D<Double>       __coordinates = new Point3D<Double>(0.0,0.0,0.0);
     
-    private final List<StrixaPolygon> __components = new ArrayList<StrixaPolygon>();
-    private final Point3D<Double>     __coordinates = new Point3D<Double>(0.0,0.0,0.0);
-    
-    private Cuboid          __bounding_box;
-    private Integer         __list_index;
+    private Cuboid         __bounding_box;
+    private Integer        __list_index;
+    private StrixaMaterial __material;
     
     
     /*Begin Constructor*/
@@ -52,10 +51,6 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
        return this.__bounding_box; 
     }
     
-    public Dimension3D<Double> getDimensions(){
-        return this.__bounding_box.getDimensions();
-    }
-    
     /**
      * Gets the list of components currently added to this element.
      * 
@@ -65,60 +60,21 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         return this.__components;
     }
     
-    /**
-     * Gets this element's coordinates in the form of a Point object.
-     * 
-     * @return This element's coordinates in the form of a Point object.
-     */
     public Point3D<Double> getCoordinates(){        
         return this.__coordinates;
     }
     
-    /**
-     * Sets this element's alpha.
-     * 
-     * @param alpha Alpha transparency this element should take on.  This should be a value between 0 and 1.
-     */
-    public void setAlpha(byte alpha){
-        final List<StrixaPolygon> polygons = this.getComponents();
-        final int                 polygon_count = polygons.size();
-        
-        
-        for(int index = 0;index < polygon_count;index++){
-            polygons.get(index).setAlpha(alpha);
-        }
+    public Dimension3D<Double> getDimensions(){
+        return this.__bounding_box.getDimensions();
     }
     
     /**
-     * Sets this element's colour.
+     * Gets the material currently being used while drawing this object.
      * 
-     * @param colour Colour this element should be set to.
+     * @return Returns the material currently being used.
      */
-    public void setColour(Color colour){
-        final List<StrixaPolygon> polygons = this.getComponents();
-        final int                 polygon_count = polygons.size();
-        
-        
-        for(int index = 0;index < polygon_count;index++){
-            polygons.get(index).setColour(colour);
-        }
-    }
-    
-    /**
-     * Sets this element's colour.
-     * 
-     * @param red Red component of this element's colour.  This should be a value between 0 and 1.
-     * @param green Green component of this element's colour.  This should be a value between 0 and 1.
-     * @param blue Blue component of this element's colour.  This should be a value between 0 and 1.
-     */
-    public void setColour(float red,float green,float blue){
-        final List<StrixaPolygon> polygons = this.getComponents();
-        final int                 polygon_count = polygons.size();
-        
-        
-        for(int index = 0;index < polygon_count;index++){
-            polygons.get(index).setColour(red,green,blue);
-        }
+    public StrixaMaterial getMaterial(){
+        return this.__material;
     }
     
     /**
@@ -133,11 +89,21 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         
         this._regenerateBoundingBox();
     }
+    
+    /**
+     * Sets the material this element should be using while being drawn.
+     * 
+     * @param material Material to be used.
+     */
+    public void setMaterial(StrixaMaterial material){
+        this.__material = material;
+    }
     /*End Getter/Setter Methods*/
     
     /*Begin Other Methods*/
     /**
-     * Adds a polygon to this element.  If the polygon already exists within this element, it will not be added again.
+     * Adds a polygon to this element.  If the polygon already exists within this element, it will not be added again.<br />
+     * <strong>Note:</strong>  The {@link Strixa3DElement#addComponents(List)} method is the preferred method to use when adding multiple components to this element. 
      * 
      * @param polygon Polygon to add to this element.
      */
@@ -167,27 +133,127 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         this._regenerateBoundingBox();
     }
     
-    public void draw(GL2 gl){
-        final Point3D<Double> this_coordinates = this.getCoordinates();
-        
+    public void draw(GL2 gl){        
         if(this.__list_index == null){
-            this.__list_index = gl.glGenLists(1);
-            gl.glNewList(this.__list_index,GL2.GL_COMPILE);
+            //this.__list_index = gl.glGenLists(1);
+            //gl.glNewList(this.__list_index,GL2.GL_COMPILE);
             
-            gl.glPushMatrix();
-            gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());        
+            this._drawComponents(this.getComponents());
             
-            for(int index = 0,end_index = this.__components.size();index < end_index;index++){                
-                this.__components.get(index).draw(gl);
-            }
-            
-            gl.glPopMatrix();
-            
-            gl.glEndList();
+            //gl.glEndList();
         }
         
         
-        gl.glCallList(this.__list_index);
+        //gl.glCallList(this.__list_index);
+    }
+    
+    /**
+     * Draws the requested component.
+     * 
+     * @param component Component to be drawn.
+     */
+    protected void _drawComponent(StrixaPolygon component){
+        final List<StrixaPoint>     coordinate_points = component.getPoints();
+        final GL2                   gl = GLContext.getCurrentGL().getGL2();
+        final List<Point3D<Double>> normal_points = component.getNormalPoints();
+        final List<Point2D<Double>> texture_points = component.getTexturePoints();
+        
+        
+        gl.glPushMatrix();
+        gl.glTranslated(component.getCoordinates().getX(),component.getCoordinates().getY(),component.getCoordinates().getZ());
+        
+        switch(component.getPoints().size()){
+            case 0:
+            case 1:
+            case 2:
+                throw new RuntimeException("You must add at least 3 points to a polygon in order for it to be drawn.");
+            case 3:
+                gl.glBegin(GL2.GL_TRIANGLES);
+                break;
+            case 4:
+                gl.glBegin(GL2.GL_QUADS);
+                break;
+            default:
+                gl.glBegin(GL2.GL_POLYGON);
+                break;
+        }
+        
+        for(int point_index = 0,point_end_index = component.getPoints().size();point_index < point_end_index;point_index++){            
+            if(!texture_points.isEmpty()){
+                gl.glTexCoord2d(
+                    texture_points.get(point_index).getX(),
+                    texture_points.get(point_index).getY()
+                );
+            }
+            if(!normal_points.isEmpty()){
+                gl.glNormal3d(
+                    normal_points.get(point_index).getX(),
+                    normal_points.get(point_index).getY(),
+                    normal_points.get(point_index).getZ()
+                );
+            }
+            gl.glVertex3d(
+                coordinate_points.get(point_index).getCoordinates().getX(),
+                coordinate_points.get(point_index).getCoordinates().getY(),
+                coordinate_points.get(point_index).getCoordinates().getZ()
+            );
+        }
+            
+        gl.glEnd();
+        gl.glPopMatrix();
+    }
+    
+    /**
+     * Draws the requested components.
+     * 
+     * @param components Components to be drawn.
+     */
+    protected void _drawComponents(List<StrixaPolygon> components){
+        final GL2             gl = GLContext.getCurrentGL().getGL2();
+        final Point3D<Double> this_coordinates = this.getCoordinates();
+        
+        
+        gl.glPushMatrix();
+        gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());     
+        
+        if(this.__material.hasTexture()){
+            if(!this.__material.isTextureLoaded()){
+                try{
+                    this.__material.loadTexture();
+                }catch(IOException e){
+                    System.out.println("Error:  Could not load requested texture.");
+                }
+            }
+
+            if(this.__material.isTextureLoaded()){  //We're adding a second if here to make sure that if the material for some reason couldn't be loaded, we don't try to bind to it still.
+                this.__material.getTexture().bind(gl);
+                this.__material.getTexture().enable(gl);
+                
+                gl.glTexEnvf(GL2.GL_TEXTURE_ENV,GL2.GL_TEXTURE_ENV_MODE,GL2.GL_MODULATE);
+                gl.glTexParameterf(GL2.GL_TEXTURE_2D,GL2.GL_TEXTURE_WRAP_S,GL2.GL_REPEAT);
+                gl.glTexParameterf(GL2.GL_TEXTURE_2D,GL2.GL_TEXTURE_WRAP_T,GL2.GL_REPEAT);
+            }
+        }
+        
+        if(this.__material.getAbientColor() != null){
+            gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_AMBIENT,this.__material.getAbientColor(),0);
+        }
+        if(this.__material.getDiffuseColor() != null){
+            gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_DIFFUSE,this.__material.getDiffuseColor(),0);
+        }
+        if(this.__material.getSpecularColor() != null){
+            gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_DIFFUSE,this.__material.getSpecularColor(),0);
+        }
+        
+        for(int component_index = 0,component_end_index = components.size();component_index < component_end_index;component_index++){
+            this._drawComponent(components.get(component_index));
+        }
+        
+        if(this.__material.isTextureLoaded()){
+            this.__material.getTexture().disable(gl);
+        }
+        
+        gl.glPopMatrix();
     }
     
     /**
@@ -197,11 +263,14 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
      * 
      * @return Returns true if this object is colliding with the given object, and false, otherwise. 
      */
-    public boolean isColliding(Strixa3DElement element){
-        //TODO_HIGH:  Renivate this method
-        for(StrixaPolygon our_polygon:this.getComponents()){
-            for(StrixaPolygon their_polygon:element.getComponents()){
-                if(our_polygon.isColliding(their_polygon)){
+    public boolean isColliding(Strixa3DElement element){        
+        List<StrixaPolygon> element_components = element.getComponents();
+        List<StrixaPolygon> this_components = this.getComponents(); 
+        
+        
+        for(int this_index = 0,this_end_index = this_components.size() - 1;this_index <= this_end_index;this_index++){
+            for(int element_index = 0,element_end_index = element_components.size();element_index <= element_end_index;element_index++){
+                if(this.__components.get(this_index).isColliding(element_components.get(element_index))){
                     return true;
                 }
             }
@@ -210,6 +279,13 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         return false;
     }
     
+    /**
+     * Simple check to determine whether this element is visible in the current context.
+     * 
+     * @param context The context in which the StrixaGL application is currently being run.
+     * 
+     * @return Returns true if this element is visible and should be drawn, and false, otherwise.
+     */
     public boolean isVisible(StrixaGLContext context){
         final Cuboid          bounding_box = this.getBoundingBox();
         final Point3D<Double> bounding_box_coordinates = bounding_box.getCoordinates();
@@ -266,9 +342,14 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
     }
     
     public void onStrixaPolygonUpdate(StrixaPolygon polygon){
+        this.__list_index = null;
+        
         this._regenerateBoundingBox();
     }
     
+    /**
+     * Regenerates the element's bounding box.
+     */
     protected void _regenerateBoundingBox(){
         final List<StrixaPolygon> polygons = this.getComponents();
         final int                 polygon_count = polygons.size();
@@ -313,15 +394,4 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         );
     }
     /*End Other Methods*/
-    
-    /*Begin Static Methods*/
-    public static int getNewListIndex(){
-        final int index = Strixa3DElement.__assigned_list_count;
-        
-        
-        Strixa3DElement.__assigned_list_count++;
-        
-        return index;
-    }
-    /*End Static Methods*/
 }
