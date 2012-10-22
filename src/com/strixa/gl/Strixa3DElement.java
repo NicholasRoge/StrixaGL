@@ -144,7 +144,7 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         }
         
         
-        //gl.glCallList(this.__list_index);
+       // gl.glCallList(this.__list_index);
     }
     
     /**
@@ -235,7 +235,9 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
             }
         }
         
-        if(this.__material.getAbientColor() != null){
+        
+        
+        for(int component_index = 0,component_end_index = components.size();component_index < component_end_index;component_index++){if(this.__material.getAbientColor() != null){
             gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_AMBIENT,this.__material.getAbientColor(),0);
         }
         if(this.__material.getDiffuseColor() != null){
@@ -244,8 +246,6 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         if(this.__material.getSpecularColor() != null){
             gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_DIFFUSE,this.__material.getSpecularColor(),0);
         }
-        
-        for(int component_index = 0,component_end_index = components.size();component_index < component_end_index;component_index++){
             this._drawComponent(components.get(component_index));
         }
         

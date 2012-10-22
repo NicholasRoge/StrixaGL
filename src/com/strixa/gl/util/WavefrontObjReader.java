@@ -293,6 +293,12 @@ public class WavefrontObjReader implements Runnable{
                     }else{
                         texture_points.add(new Point2D<Double>(Double.parseDouble(split[1]),Double.parseDouble(split[2])));
                     }
+                }else if(split[0].equals("vn")){
+                    if(split.length < 3){
+                        throw new RuntimeException("Object line incorrectly formatted!  Line number:  " + line_number);
+                    }else{
+                        normal_points.add(new Point3D<Double>(Double.parseDouble(split[1]),Double.parseDouble(split[2]),Double.parseDouble(split[1])));
+                    }
                 }else if(split[0].equals("usemtl")){
                     if(split.length == 1){
                         line = "anonymous";
