@@ -4,24 +4,16 @@
  */
 package com.strixa.gl;
 
-import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.FPSAnimator;
-import com.strixa.util.Dimension2D;
-
 import javax.media.opengl.GL2;
-import javax.media.opengl.GLAnimatorControl;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCapabilities;
-import javax.media.opengl.GLContext;
-import javax.media.opengl.GLDrawable;
-import javax.media.opengl.GLDrawableFactory;
 import javax.media.opengl.GLEventListener;
-import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 
 
 /**
- * Creates an object which any Strixa elements should be drawn on.
+ * Creates an canvas to which any Strixa elements should be drawn.
  *
  * @author Nicholas Rogé
  */
@@ -33,7 +25,6 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     private final StrixaGLContext __context = new StrixaGLContext();
    
     private double  __aspect_ratio;
-    private boolean __exiting;
     
     
     /*Begin Constructors*/
@@ -47,7 +38,6 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
         super(capabilities);
         
         
-        this.__exiting=false;
         this.setAspectRatio(aspect_ratio);        
         
         this.addGLEventListener(this);
@@ -69,15 +59,6 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     }
     
     /**
-     * Gets the maximum number of frames that may be displayed in a second.
-     * 
-     * @return The current FPS setting.
-     */
-    public int getFPS(){
-        return this.__context.getCurrentFPS();
-    }
-    
-    /**
      * Gets the canvas' current context.
      * 
      * @return The canvas' current context.
@@ -86,12 +67,17 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
         return this.__context;
     }
     
+    /**
+     * Sets this canvas' aspect ratio.  That is to say, the width of this canvas divided by its height.
+     * 
+     * @param aspect_ratio Aspect ratio of this canvas.
+     */
     public void setAspectRatio(double aspect_ratio){
         this.__aspect_ratio = aspect_ratio;
     }
     /*End Getter/Setter Methods*/
     
-    /*Begin Other Methods*/  
+    /*Begin Other Methods*/
     public void display(GLAutoDrawable drawable){   
         this._performGameLogic(this.getStrixaGLContext());
         
@@ -115,7 +101,6 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
         gl.setSwapInterval(1);
         
         
-        /*Set up and start the game thread*/
         this.__animator.add(this);
         this.__animator.start();
     }
@@ -123,16 +108,6 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     public void reshape(GLAutoDrawable drawable,int x,int y,int width,int height){
         drawable.getGL().glViewport(x,y,width,height);
     }
-    
-    /**
-     * This should be called when this canvas is to close and clean itself up.
-     */
-    public void triggerExiting(){
-        this.__exiting = true;
-        
-        //TODO:  Call this this object's onExit listeners
-    }
-    /*End Other Methods*/
     
     /*Begin Abstract Methods*/
     /**

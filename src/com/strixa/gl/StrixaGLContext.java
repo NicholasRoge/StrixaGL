@@ -12,7 +12,6 @@ import com.strixa.gl.properties.Cuboid;
  * @author Nicholas Rogé
  */
 public class StrixaGLContext{
-    private int    __current_fps;
     private Cuboid __viewable_area;
     
     
@@ -26,24 +25,12 @@ public class StrixaGLContext{
     }
     
     /**
-     * Gets the current maximum framerate.
+     * Sets teh viewable area of this canvas.
      * 
-     * @return The current maximum framerate.
+     * @param viewable_area A {@link Cuboid} which represents the total viewable area of this canvas.
      */
-    public int getCurrentFPS(){
-        return this.__current_fps;
-    }
-    
-    /**
-     * Sets the current maximum framerate.
-     * 
-     * @param fps The maximum framerate to allow in this application.
-     */
-    public void setCurrentFPS(int fps){
-        this.__current_fps = fps;
-    }
-    
     public void setViewableArea(Cuboid viewable_area){
         this.__viewable_area = viewable_area;
     }
 }
+//TODO:  Look at renaming the "viewable_area" portions of this class, as that's a bit of a misnomer.  Rather, these methods actually represent the total renderable area of the canvas.

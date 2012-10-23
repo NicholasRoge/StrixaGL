@@ -22,7 +22,7 @@ import com.strixa.util.Point3D;
 
 
 /**
- * Reads in a .blend file.
+ * Reads in a wavefront .obj file.
  *
  * @author Nicholas Rogé
  */
@@ -97,9 +97,7 @@ public class WavefrontObjReader implements Runnable{
         return line;
     }
     
-    protected List<StrixaMaterial> _readMtl(String filename){
-        final List<StrixaMaterial> materials = new ArrayList<StrixaMaterial>();
-        
+    protected void _readMtl(String filename){        
         FileInputStream file = null;
         String          line = null;
         int             line_number = 0;
@@ -120,10 +118,6 @@ public class WavefrontObjReader implements Runnable{
                 
                 split = line.split(" ");
                 if(split[0].equals("newmtl")){
-                    if(material != null){
-                        materials.add(material);
-                    }
-                    
                     material = new StrixaMaterial(split.length == 0 ? "anonymous" : split[1]);
                 }else if(split[0].equals("Ka")){
                     if(split.length != 4){
@@ -154,7 +148,7 @@ public class WavefrontObjReader implements Runnable{
                         throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
                     }
                     
-                    material.setTransparency(Float.valueOf(split[1]));
+                    material.setAlpha(Float.valueOf(split[1]));
                 }else if(split[0].equals("illum")){
                     if(split.length != 2){
                         throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
@@ -173,8 +167,6 @@ public class WavefrontObjReader implements Runnable{
                     material.setTexture(line);
                 }
             }
-            
-            materials.add(material);
         }catch(FileNotFoundException e){
             throw new RuntimeException("No such file was found in the given path:  "+this.__file_location);
         }catch(IOException e){
@@ -191,8 +183,6 @@ public class WavefrontObjReader implements Runnable{
                 throw new RuntimeException("Could not close file properly.");
             }
         }
-        
-        return materials;
     }
     
     public void removePercentLoadedUpdateListener(PercentLoadedUpdateListener listener){
@@ -210,7 +200,6 @@ public class WavefrontObjReader implements Runnable{
         double                last_update = 0;
         String                line = null;
         int                   line_number = 0;
-        List<StrixaMaterial>  materials = null;
         List<Point3D<Double>> normal_points = null;
         Strixa3DElement       object =  null;
         String                object_name = null;
@@ -266,7 +255,7 @@ public class WavefrontObjReader implements Runnable{
                         }
                     }
                     
-                    materials = this._readMtl(line);
+                    this._readMtl(line);
                 }else if(split[0].equals("o")){
                     if(split.length < 2){
                         throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
@@ -306,13 +295,7 @@ public class WavefrontObjReader implements Runnable{
                         line = split[1];
                     }
                     
-                    current_material = null;
-                    
-                    for(int index = 0;index < materials.size();index++){
-                        if(materials.get(index).getMaterialName().equals(line)){
-                            current_material = materials.get(index);
-                        }
-                    }
+                    current_material = StrixaMaterial.getMaterialByName(line);
                     if(current_material == null){
                         System.out.println("Warning:  Material with name " + line + " could not be found.  Line number " + line_number);
                     }
