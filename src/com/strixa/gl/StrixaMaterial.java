@@ -6,20 +6,15 @@ package com.strixa.gl;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import javax.imageio.ImageIO;
 import javax.media.opengl.GL2;
 import javax.media.opengl.GLContext;
 import javax.media.opengl.GLException;
 
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureIO;
-import com.strixa.util.Point2D;
-import com.strixa.util.Point3D;
 
 /**
  * Describes the material a StrixaElement is made of.
@@ -58,6 +53,7 @@ public class StrixaMaterial{
         }
         
         this.__name = material_name;
+        StrixaMaterial.registerMaterial(this);
     }
     /*End Constructors*/
     
@@ -274,7 +270,7 @@ public class StrixaMaterial{
      * 
      * @throws IllegalArgumentException Thrown if the given material has no name.
      */
-    protected static void _registerMaterial(StrixaMaterial material){
+    public static void registerMaterial(StrixaMaterial material){
     	if(material.getName().isEmpty()){
     		throw new IllegalArgumentException();
     	}
