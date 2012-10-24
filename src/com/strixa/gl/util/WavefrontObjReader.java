@@ -17,6 +17,7 @@ import com.strixa.gl.Strixa3DElement;
 import com.strixa.gl.StrixaMaterial;
 import com.strixa.gl.StrixaPoint;
 import com.strixa.gl.StrixaPolygon;
+import com.strixa.util.FileIO;
 import com.strixa.util.Point2D;
 import com.strixa.util.Point3D;
 
@@ -27,6 +28,105 @@ import com.strixa.util.Point3D;
  * @author Nicholas Rogé
  */
 public class WavefrontObjReader implements Runnable{
+	private enum Command{		
+		MTLIB("mtlib"),
+		V("v"),
+		VN("vn"),
+		VT("vt");
+		
+		
+		private static class CommandObject{
+			private Command __command;
+			private String  __command_parameters;
+			
+			
+			/*Begin Constructors*/
+			public CommandObject(Command command,String command_parameters){
+				this.__command = command;
+				this.__command_parameters = command_parameters;
+			}
+			/*End Constructors*/
+			
+			/*Begin Getter/Setter Methods*/
+			public Command getCommand(){
+				return this.__command;
+			}
+			
+			public String getCommandParameters(){
+				return this.__command_parameters;
+			}
+			/*End Getter/Setter Methods*/
+		}
+		
+		private String __command_name;
+		
+		/*Begin Constructors*/
+		private Command(String command_name){
+			if(command_name == null || command_name.isEmpty()){
+				throw new IllegalArgumentException();
+			}
+			
+			this.__command_name = command_name;
+		}
+		/*End Constructors*/
+		
+		/*Begin Getter/Setter Methods*/
+		public String getName(){
+			return this.__command_name;
+		}
+		/*End Getter/Setter Methods*/
+		
+		/*Begin Static Methods*/
+		/**
+		 * Gets a {@link CommandObject} from the specified string.
+		 * 
+		 * @param command_string
+		 * 
+		 * @return Returns an instantiated {@link CommandObject} if a successful command is found, and null, otherwise.
+		 */
+		public static CommandObject getCOFromString(String command_string){
+			final Command[]     values = Command.values();
+			
+			Command       command = null;
+			String        command_parameters = null;
+			CommandObject command_object = null;
+			String        name = null;
+			
+			
+			command_string = command_string.trim();
+			if(command_string.length() > 0){
+				if(command_string.indexOf(' ') == -1){
+					name = command_string;
+					
+					command_parameters = null;
+				}else{
+					name = command_string.substring(0,command_string.indexOf(' ') - 1);
+					
+					command_parameters = command_string.substring(command_string.indexOf(' '),command_string.length());
+					if(command_parameters.trim().isEmpty()){  //This would happen, for example, if the command is there, but it has a number of trailing spaces after it.
+						command_parameters = null;
+					}
+				}
+				
+				//Find teh correct command
+				for(int value_index = 0,end_index = values.length;value_index <= end_index;value_index++){
+					if(name.equals(values[value_index].getName())){
+						command = values[value_index];
+						
+						break;
+					}
+				}
+				
+				if(command != null){
+					command_object = new CommandObject(command,command_parameters);
+				}
+			}
+			
+			return command_object;
+		}
+		/*End Static Methods*/
+	}
+	
     private final List<PercentLoadedUpdateListener> __percent_loaded_listeners = new ArrayList<PercentLoadedUpdateListener>();
     private final Thread                            __read_thread = new Thread(this,"WavefrontReader_read_thread");
     
@@ -37,10 +137,21 @@ public class WavefrontObjReader implements Runnable{
     
     
     /*Begin Constructor*/
+    /**
+     * Constructs an object to read in the given file.
+     * 
+     * @param file_location Location where the Wavefront OBJ file is stored.
+     */
     public WavefrontObjReader(String file_location){
         this(file_location,1);
     }
     
+    /**
+     * Constructs an object to read in the given file.
+     * 
+     * @param file_location Location where the Wavefront OBJ file is stored.
+     * @param update_step Amount of points the file load percentage must increase for this object's listeners to be updated again.
+     */
     public WavefrontObjReader(String file_location,double update_step){
         if(file_location == null || file_location.equals("")){
             throw new IllegalArgumentException("Argument 'file_location' must not be null or empty.");
@@ -53,6 +164,11 @@ public class WavefrontObjReader implements Runnable{
     /*End Constructor*/
     
     /*Begin Other Essential Methods*/
+    /**
+     * Adds a {@link PercentLoadedUpdateListener} be notified when this object needs to send out updates.
+     * 
+     * @param listener Listener requesting to be notified.
+     */
     public void addPercentLoadedUpdateListener(PercentLoadedUpdateListener listener){
         if(!this.__percent_loaded_listeners.contains(listener)){
             this.__percent_loaded_listeners.add(listener);
@@ -65,36 +181,12 @@ public class WavefrontObjReader implements Runnable{
         }
     }
     
+    /**
+     * Notifies this object that it should start reading from the requested file.<br />
+     * <strong>Note:</strong>  This is a threaded, nonblocking method.
+     */
     public void read(){
         this.__read_thread.start();
-    }
-    
-    protected String _readLine(FileInputStream file) throws IOException{
-        String line = null;
-        int character = 0x00;
-        
-        
-        if(file == null){
-            throw new IllegalArgumentException("Argument 'file' must not be null.");
-        }
-        
-        line = new String();
-        do{
-            character = file.read();
-            
-            line += (char)character;
-        }while(character != '\n' && character != -1);
-        
-        if(line.charAt(line.length() - 1) == (char)-1){
-            line = line.substring(0,line.length()-1);  //This kills the end character
-            if(line.isEmpty()){
-                line = null;
-            }
-        }else if(line.charAt(line.length() - 1) == '\n'){
-            line = line.substring(0,line.length() - 1);  //This kills the newline
-        }
-        
-        return line;
     }
     
     protected void _readMtl(String filename){        
@@ -109,7 +201,7 @@ public class WavefrontObjReader implements Runnable{
             file = new FileInputStream(filename);
             
             
-            while((line = this._readLine(file)) != null){
+            while((line = FileIO.readLine(file)) != null){
                 line_number++;
                 
                 if(line.trim().equals("") || line.charAt(0) == '#'){
@@ -194,6 +286,7 @@ public class WavefrontObjReader implements Runnable{
     }
     
     public void run(){
+    	Command.CommandObject command = null;
         StrixaMaterial        current_material = null;
         String[]              face_split = null;
         FileInputStream       file = null;
@@ -221,11 +314,27 @@ public class WavefrontObjReader implements Runnable{
             texture_points = new ArrayList<Point2D<Double>>(1000);
             object_polygons = new ArrayList<StrixaPolygon>(1000);
             this.__objects = new ArrayList<Strixa3DElement>(100);
-            while((line = this._readLine(file)) != null){
+            
+            while((line = FileIO.readLine(file)) != null){
                 line_number++;
                 
                 if(line.trim().equals("") || line.charAt(0) == '#'){
                     continue;  //Skip empty lines and comments
+                }
+                
+                
+                command = Command.getCOFromString(line);
+                if(command == null){
+                	System.out.println("Cannot handle input.  Line number:  " + line_number);
+                	
+                	continue;
+                }
+                
+                //Begin processing the arguments
+                switch(command.getCommand()){
+                	case MTLIB:
+                		
+                		break;
                 }
                 
                 split = line.split(" ");

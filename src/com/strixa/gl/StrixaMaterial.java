@@ -36,24 +36,26 @@ public class StrixaMaterial{
     
     /*Begin Constructors*/
     /**
-     * Constructs a new anonymous material.  This material will not be able to be retrieved if all handles to this object are lost.
-     *///TODO:  Reword that.  I don't like how it's worded.  :/
+     * Constructs a new anonymous material.  This material will not be able to be retrieved using {@link StrixaMaterial#getMaterialByName(String)} unless you register it manually.
+     */
     public StrixaMaterial(){
     	this.__name = "";
     }
     
     /**
-     * Constructs a material with the given name, allowing it to be retrieved in the future using {@link StrixaMaterial#getMaterialByName(String)}.
+     * Constructs a material with the given name, allowing it to be retrieved in the future using {@link StrixaMaterial#getMaterialByName(String)}.  If a material with the given material name exists already, you will have to manually call the registration method with the third parameter as true to register this material.
      * 
      * @param material_name Name this material should have.
      */
     public StrixaMaterial(String material_name){
-        if(material_name == null){
-            throw new NullPointerException("Argument 'material_name' must not be null.");
+        if(material_name == null || material_name.trim().isEmpty()){
+            throw new NullPointerException("Argument 'material_name' must not be null or empty.");
         }
         
         this.__name = material_name;
-        StrixaMaterial.registerMaterial(this);
+        if(StrixaMaterial.registerMaterial(material_name,this,false)){
+        	System.out.println("Could not register material.  A material with that name already exists.");
+        }
     }
     /*End Constructors*/
     
@@ -268,14 +270,20 @@ public class StrixaMaterial{
      * 
      * @param material Material to register.
      * 
-     * @throws IllegalArgumentException Thrown if the given material has no name.
+     * @throws NullPointerException Thrown if the given material has no name.
      */
-    public static void registerMaterial(StrixaMaterial material){
-    	if(material.getName().isEmpty()){
-    		throw new IllegalArgumentException();
+    public static boolean registerMaterial(String material_name,StrixaMaterial material,boolean overwrite_existing){
+    	if(material == null || material.getName().isEmpty()){
+    		throw new NullPointerException("Argument 'material_name' must not be null or empty.");
     	}
     	
-    	StrixaMaterial.__material_map.put(material.getName(),material);
+    	if(StrixaMaterial.__material_map.containsKey(material_name) && !overwrite_existing){
+    		return false;
+    	}else{
+    		StrixaMaterial.__material_map.put(material.getName(),material);
+    		
+    		return true;
+    	}
     }
     /*End Static Methods*/
 }
