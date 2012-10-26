@@ -34,6 +34,15 @@ public class StrixaMaterial{
     String                __texture_file_location;
     
     
+    {
+        this.__alpha = 1f;
+        this.__ambient_color = new float[]{1f,1f,1f};
+        this.__diffuse_color = new float[]{1f,1f,1f};
+        this.__specular_color = new float[]{1f,1f,1f};
+        this.__specular_coefficient = 0f;
+        this.__texture = null;
+        this.__texture_file_location = null;
+    }
     /*Begin Constructors*/
     /**
      * Constructs a new anonymous material.  This material will not be able to be retrieved using {@link StrixaMaterial#getMaterialByName(String)} unless you register it manually.
@@ -53,7 +62,7 @@ public class StrixaMaterial{
         }
         
         this.__name = material_name;
-        if(StrixaMaterial.registerMaterial(material_name,this,false)){
+        if(!StrixaMaterial.registerMaterial(material_name,this,false)){
         	System.out.println("Could not register material.  A material with that name already exists.");
         }
     }

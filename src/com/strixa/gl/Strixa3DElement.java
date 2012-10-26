@@ -13,6 +13,7 @@ import javax.media.opengl.GLContext;
 
 import com.strixa.gl.StrixaPolygon.StrixaPolygonUpdateListener;
 import com.strixa.gl.properties.Cuboid;
+import com.strixa.gl.util.Vertex;
 import com.strixa.util.Dimension3D;
 import com.strixa.util.Point2D;
 import com.strixa.util.Point3D;
@@ -37,6 +38,8 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
      * Constructs a basic Strixa3DElement.
      */
     public Strixa3DElement(){
+        this.__material = new StrixaMaterial();
+        
         this._regenerateBoundingBox();
     }
     /*End Constructor*/
@@ -153,10 +156,10 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
      * @param component Component to be drawn.
      */
     protected void _drawComponent(StrixaPolygon component){
-        final List<StrixaPoint>     coordinate_points = component.getPoints();
-        final GL2                   gl = GLContext.getCurrentGL().getGL2();
-        final List<Point3D<Double>> normal_points = component.getNormalPoints();
-        final List<Point2D<Double>> texture_points = component.getTexturePoints();
+        final List<Vertex> coordinate_points = component.getPoints();
+        final GL2          gl = GLContext.getCurrentGL().getGL2();
+        final List<Vertex> normal_points = component.getNormalPoints();
+        final List<Vertex> texture_points = component.getTexturePoints();
         
         
         gl.glPushMatrix();
@@ -181,8 +184,9 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         for(int point_index = 0,point_end_index = component.getPoints().size();point_index < point_end_index;point_index++){            
             if(!texture_points.isEmpty()){
                 gl.glTexCoord2d(
-                    texture_points.get(point_index).getX(),
-                    texture_points.get(point_index).getY()
+                    texture_points.get(point_index).getX(),     //U
+                    texture_points.get(point_index).getY()//,     //V
+                    //texture_points.get(point_index).getWeight() //W
                 );
             }
             if(!normal_points.isEmpty()){
@@ -193,9 +197,10 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
                 );
             }
             gl.glVertex3d(
-                coordinate_points.get(point_index).getCoordinates().getX(),
-                coordinate_points.get(point_index).getCoordinates().getY(),
-                coordinate_points.get(point_index).getCoordinates().getZ()
+                coordinate_points.get(point_index).getX(),
+                coordinate_points.get(point_index).getY(),
+                coordinate_points.get(point_index).getZ()//,
+                //coordinate_points.get(point_index).getWeight()
             );
         }
             
@@ -207,7 +212,7 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
      * Draws the requested components.
      * 
      * @param components Components to be drawn.
-     */
+     */int blah = 0;
     protected void _drawComponents(List<StrixaPolygon> components){
         final GL2             gl = GLContext.getCurrentGL().getGL2();
         final Point3D<Double> this_coordinates = this.getCoordinates();
@@ -215,7 +220,7 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         
         gl.glPushMatrix();
         gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());     
-        
+
         if(this.__material.hasTexture()){
             if(!this.__material.isTextureLoaded()){
                 try{
@@ -235,15 +240,13 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
             }
         }
         
-        if(this.__material.getAmbientColor() != null){
+        if(gl.glIsEnabled(GL2.GL_LIGHTING)){
             gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_AMBIENT,this.__material.getAmbientColor(),0);
-        }
-        if(this.__material.getDiffuseColor() != null){
             gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_DIFFUSE,this.__material.getDiffuseColor(),0);
-        }
-        if(this.__material.getSpecularColor() != null){
             gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_DIFFUSE,this.__material.getSpecularColor(),0);
-        }        
+        }else{
+            gl.glColor3fv(this.__material.getDiffuseColor(),0);  //This is just a temporary set up for right now.
+        }
         
         for(int component_index = 0,component_end_index = components.size();component_index < component_end_index;component_index++){
             this._drawComponent(components.get(component_index));
@@ -355,11 +358,10 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
         final int                 polygon_count = polygons.size();
         final Point3D<Double>     this_coordinates = this.getCoordinates();
         
-        Point3D<Double>   coordinates = null;
         double            depth = 0.0;
         double            height = 0.0;
         int               point_count = 0;
-        List<StrixaPoint> points = null;
+        List<Vertex>      points = null;
         double            width = 0.0;
         
         
@@ -373,11 +375,9 @@ public class Strixa3DElement extends StrixaGLElement implements StrixaPolygonUpd
                 point_count = points.size();
                 
                 for(int point_index = 0;point_index < point_count;point_index++){
-                    coordinates = points.get(point_index).getCoordinates();
-
-                    width = Math.max(width,coordinates.getX());
-                    height = Math.max(height,coordinates.getY());
-                    depth = Math.max(depth,coordinates.getZ());
+                    width = Math.max(width,points.get(point_index).getX());
+                    height = Math.max(height,points.get(point_index).getY());
+                    depth = Math.max(depth,points.get(point_index).getZ());
                 }
             }
             

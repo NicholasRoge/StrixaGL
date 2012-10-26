@@ -248,6 +248,8 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         
         gl.glEnable(GL2.GL_LIGHT0);
         gl.glEnable(GL2.GL_LIGHTING);
+        gl.glEnable(GL2.GL_COLOR_MATERIAL);
+        gl.glColorMaterial(GL2.GL_FRONT_FACE,GL2.GL_AMBIENT_AND_DIFFUSE);
         
         /*gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_AMBIENT,new float[]{.3f,.5f,.1f,1f},0);
         gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_SPECULAR,new float[]{.3f,.5f,.1f,1f},0);

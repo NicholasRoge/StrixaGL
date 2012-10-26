@@ -9,32 +9,32 @@ package com.strixa.util;
  *
  * @author Nicholas Rogé
  */
-public class Point2D <T extends Number> extends Point1D<T>{
+public class Point2D <T extends Number> extends Point<T>{
+    private T __x;
     private T __y;
     
     
     /*Begin Constructors*/
     /**
-     * Constructs a Point2D object whose coordinates are at the given points.
+     * Constructs a Point whose coordinates are at the given points.
      * 
      * @param x X coordinate.
      * @param y Y coordinate.
+     * @param z Z coordinate
      */
     public Point2D(T x,T y){
-        super(x);
-        
-        this.setY(y);
+        this.__x = x;
+        this.__y = y;
     }
     
     /**
-     * Constructs a copy of the given Point2D object.
+     * Constructs a copy of the given Point.
      * 
-     * @param copy Point2D object whose data should be copied.
+     * @param copy Point whose data should be copied.
      */
     public Point2D(Point2D<T> copy){
-        super(copy);
-        
-        this.setPoint(copy.getX(),copy.getY());
+        this.__x = copy.getX();
+        this.__y = copy.getY();
     }
     /*End Constructors*/
     
@@ -43,6 +43,15 @@ public class Point2D <T extends Number> extends Point1D<T>{
      * Gets this point's X coordinate.
      * 
      * @return This point's X coordinate.
+     */
+    public T getX(){
+        return this.__x;
+    }
+    
+    /**
+     * Gets this point's Y coordinate.
+     * 
+     * @return This point's Y coordinate.
      */
     public T getY(){
         return this.__y;
@@ -53,6 +62,7 @@ public class Point2D <T extends Number> extends Point1D<T>{
      * 
      * @param x X coordinate of the point.
      * @param y Y coordinate of the point.
+     * @param z Z coordinate of the point.
      */
     public void setPoint(T x,T y){
         this.setX(x);
@@ -60,7 +70,16 @@ public class Point2D <T extends Number> extends Point1D<T>{
     }
     
     /**
-     * Sets this point's Y Coordinate.
+     * Sets this point's X coordinate.
+     * 
+     * @param x X coordinate of the point.
+     */
+    public void setX(T x){
+        this.__x = x;
+    }
+    
+    /**
+     * Sets this point's Y coordinate.
      * 
      * @param y Y coordinate of the point.
      */
@@ -77,8 +96,12 @@ public class Point2D <T extends Number> extends Point1D<T>{
      * 
      * @return Returns true if the given point is at the same location as this one, and false, otherwise.
      */
-    public boolean equals(Point2D<T> point){
-        if(super.equals(point) && this.getY()==point.getY()){
+    public boolean equals(Point3D<T> point){
+        if(
+            this.getX() == point.getX()
+            &&
+            this.getY() == point.getY()
+        ){
             return true;
         }
         

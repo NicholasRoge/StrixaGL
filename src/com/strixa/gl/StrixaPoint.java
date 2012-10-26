@@ -24,9 +24,6 @@ public class StrixaPoint{
     
     private final Point3D<Double> __coordinates  = new Point3D<Double>(0.0,0.0,0.0);
     
-    private Byte  __alpha; 
-    private Color __colour;
-    
 
     /*Begin Constructors*/
     /**
@@ -35,23 +32,17 @@ public class StrixaPoint{
      * @param x_coordinate X coordinate of the point.
      * @param y_coordinate Y coordinate of the point.
      * @param z_coordinate Z coordinate of the point.
-     * @param colour Colour of the point.
-     * @param alpha Visibility of the point.  This should be a number between 0 (not visible) and 255 (fully visible).
      */
-    public StrixaPoint(double x_coordinate,double y_coordinate,double z_coordinate,Color colour,byte alpha){
-        this(new Point3D<Double>(x_coordinate,y_coordinate,z_coordinate),colour,alpha);
+    public StrixaPoint(double x_coordinate,double y_coordinate,double z_coordinate){
+        this(new Point3D<Double>(x_coordinate,y_coordinate,z_coordinate));
     }
     
     /**
      * Constructs the point with the specified properties.
      * 
      * @param coordinates Point in three-dimensional space this point should be located at.
-     * @param colour Colour of the point.
-     * @param alpha Visibility of the point.  This should be a number between 0 (not visible) and 255 (fully visible).
      */
-    public StrixaPoint(Point3D<Double> coordinates,Color colour,Byte alpha){        
-        this.setAlpha(alpha);
-        this.setColour(colour);
+    public StrixaPoint(Point3D<Double> coordinates){        
         this.setCoordinates(coordinates);
     }
     
@@ -64,31 +55,11 @@ public class StrixaPoint{
         final Point3D<Double> coordinates = point.getCoordinates();
         
         
-        this.setAlpha(point.getAlpha());
-        this.setColour(point.getColour());
         this.setCoordinates(coordinates.getX(),coordinates.getY(),coordinates.getZ());
     }
     /*End Constructors*/
     
-    /*Begin Getter/Setters*/
-    /**
-     * Gets the alpha property of this Point.
-     * 
-     * @return Returns the alpha property of this Point.
-     */
-    public Byte getAlpha(){
-        return this.__alpha;
-    }
-    
-    /**
-     * Gets the colour property of this Point.
-     * 
-     * @return Returns the colour property of this Point.
-     */
-    public Color getColour(){
-        return this.__colour;
-    }
-    
+    /*Begin Getter/Setters*/    
     /**
      * Gets the coordinates of this Point.
      * 
@@ -96,32 +67,6 @@ public class StrixaPoint{
      */
     public Point3D<Double> getCoordinates(){
         return this.__coordinates;
-    }
-    
-    /**
-     * Sets the alpha property of this point.
-     * 
-     * @param alpha Visibility of the point.  This should be a number between 0 (not visible) and 255 (fully visible).
-     */
-    public void setAlpha(Byte alpha){
-        if(alpha == null){
-            throw new IllegalArgumentException("Argument 'alpha' must not be null.");
-        }
-        
-        this.__alpha = alpha;
-    }
-    
-    /**
-     * Sets the colour property of this point.
-     * 
-     * @param colour Colour of the point.
-     */
-    public void setColour(Color colour){
-        if(colour == null){
-            throw new IllegalArgumentException("Argument 'colour' must not be null.");
-        }
-        
-        this.__colour = colour;
     }
     
     /**

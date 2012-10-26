@@ -5,6 +5,7 @@
 package com.strixa.gl.util;
 
 import java.awt.Color;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,22 +29,49 @@ import com.strixa.util.Point3D;
  * @author Nicholas Rogé
  */
 public class WavefrontObjReader implements Runnable{
-	private enum Command{		
-		MTLIB("mtlib"),
-		V("v"),
-		VN("vn"),
-		VT("vt");
+    /**
+     * Defines commands to be interpreted in a .obj or .mtl file.
+     *
+     * @author Nicholas Rogé
+     */
+	private enum Command{
+	    DEFINE_AMBIENT_COLOR("Ka"),
+	    DEFINE_AMBIENT_TEXTURE("map_Ka"),
+	    DEFINE_DIFFUSE_COLOR("Kd"),
+	    DEFINE_DIFFUSE_TEXTURE("map_Kd"),
+	    DEFINE_FACE("f"),
+	    DEFINE_ILLUMINATION_MODEL("illum"),
+	    DEFINE_MATERIAL("newmtl"),
+		DEFINE_NORMAL_VERTEX("vn"),
+		DEFINE_OBJECT("o"),
+		DEFINE_SPECULAR_COEFFICIENT("Ns"),
+		DEFINE_SPECULAR_COEFFICIENT_TEXTURE("map_Ns"),
+		DEFINE_SPECULAR_COLOR("Ks"),
+		DEFINE_SPECULAR_TEXTURE("map_Ks"),
+		DEFINE_TEXTURE_TRANSPARENCY("map_d"),
+		DEFINE_TEXTURE_VERTEX("vt"),
+		DEFINE_TRANSPARENCY("d"),
+		DEFINE_VERTEX("v"),
+		READ_MATERIAL_LIBRARY("mtllib"),
+		USE_MATERIAL("usemtl");
 		
 		
 		private static class CommandObject{
-			private Command __command;
-			private String  __command_parameters;
+			private Command   __command;
+			private String[]  __parameters;
+			private int       __parameter_count;
 			
 			
 			/*Begin Constructors*/
-			public CommandObject(Command command,String command_parameters){
+			public CommandObject(Command command,String[] parameters){
 				this.__command = command;
-				this.__command_parameters = command_parameters;
+				this.__parameters = parameters;
+				
+				if(parameters == null){
+				    this.__parameter_count = 0;
+				}else{
+				    this.__parameter_count = parameters.length;
+				}
 			}
 			/*End Constructors*/
 			
@@ -52,8 +80,12 @@ public class WavefrontObjReader implements Runnable{
 				return this.__command;
 			}
 			
-			public String getCommandParameters(){
-				return this.__command_parameters;
+			public String[] getParameters(){
+				return this.__parameters;
+			}
+			
+			public int getParameterCount(){
+			    return this.__parameter_count;
 			}
 			/*End Getter/Setter Methods*/
 		}
@@ -87,29 +119,43 @@ public class WavefrontObjReader implements Runnable{
 		public static CommandObject getCOFromString(String command_string){
 			final Command[]     values = Command.values();
 			
-			Command       command = null;
-			String        command_parameters = null;
-			CommandObject command_object = null;
-			String        name = null;
+			Command           command = null;
+			ArrayList<String> command_parameter_buffer = null;
+			String[]          command_parameters = null;
+			CommandObject     command_object = null;
+			String            name = null;
 			
 			
 			command_string = command_string.trim();
-			if(command_string.length() > 0){
+			if(!command_string.isEmpty()){
 				if(command_string.indexOf(' ') == -1){
 					name = command_string;
 					
 					command_parameters = null;
 				}else{
-					name = command_string.substring(0,command_string.indexOf(' ') - 1);
+					name = command_string.substring(0,command_string.indexOf(' '));
 					
-					command_parameters = command_string.substring(command_string.indexOf(' '),command_string.length());
-					if(command_parameters.trim().isEmpty()){  //This would happen, for example, if the command is there, but it has a number of trailing spaces after it.
-						command_parameters = null;
+					command_parameters = command_string.substring(command_string.indexOf(' ') + 1,command_string.length()).split(" ");
+					if(command_parameters.length > 0){
+					    command_parameter_buffer = new ArrayList<String>();
+					    for(int parameter_index = 0;parameter_index < command_parameters.length;parameter_index++){
+	                        if(!command_parameters[parameter_index].trim().isEmpty()){
+	                            command_parameter_buffer.add(command_parameters[parameter_index]); 
+	                        }
+	                    }
+					    
+					    if(command_parameter_buffer.size() == 0){
+					        command_parameters = null;
+					    }else{
+					        command_parameters = command_parameter_buffer.toArray(new String[command_parameter_buffer.size()]);
+					    }
+					}else{
+					    command_parameters = null;
 					}
 				}
 				
 				//Find teh correct command
-				for(int value_index = 0,end_index = values.length;value_index <= end_index;value_index++){
+				for(int value_index = 0,end_index = values.length - 1;value_index <= end_index;value_index++){
 					if(name.equals(values[value_index].getName())){
 						command = values[value_index];
 						
@@ -189,74 +235,137 @@ public class WavefrontObjReader implements Runnable{
         this.__read_thread.start();
     }
     
-    protected void _readMtl(String filename){        
-        FileInputStream file = null;
-        String          line = null;
-        int             line_number = 0;
-        StrixaMaterial  material = null;
-        String[]        split = null;
+    protected void _readMtl(String file_location){
+        Command.CommandObject command = null;
+        FileInputStream       file_stream = null;
+        String                line = null;
+        int                   line_number = 0;
+        StrixaMaterial        current_material = null;
+        File                  mtl_file_handle = null;
         
         
         try{
-            file = new FileInputStream(filename);
+            mtl_file_handle = new File(file_location);
+            file_stream = new FileInputStream(mtl_file_handle);
             
             
-            while((line = FileIO.readLine(file)) != null){
+            while((line = FileIO.readLine(file_stream)) != null){
                 line_number++;
                 
-                if(line.trim().equals("") || line.charAt(0) == '#'){
+                if(line.isEmpty() || line.charAt(0) == '#'){
                     continue;  //Skip empty lines and comments
                 }
                 
-                split = line.split(" ");
-                if(split[0].equals("newmtl")){
-                    material = new StrixaMaterial(split.length == 0 ? "anonymous" : split[1]);
-                }else if(split[0].equals("Ka")){
-                    if(split.length != 4){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
+                command = Command.getCOFromString(line);
+                if(command == null){
+                    System.out.println("Cannot handle input.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
                     
-                    material.setAmbientColor(new float[]{Float.valueOf(split[1]),Float.valueOf(split[2]),Float.valueOf(split[3])});
-                }else if(split[0].equals("Kd")){
-                    if(split.length != 4){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
-                    
-                    material.setDiffuseColor(new float[]{Float.valueOf(split[1]),Float.valueOf(split[2]),Float.valueOf(split[3])});
-                }else if(split[0].equals("Ks")){
-                    if(split.length != 4){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
-                    
-                    material.setSpecularColor(new float[]{Float.valueOf(split[1]),Float.valueOf(split[2]),Float.valueOf(split[3])});
-                }else if(split[0].equals("Ns")){
-                    if(split.length != 2){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
-                    
-                    material.setSpecularCoefficient(Float.valueOf(split[1]));
-                }else if(split[0].equals("d") || split[0].equals("Tr")){
-                    if(split.length != 2){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
-                    
-                    material.setAlpha(Float.valueOf(split[1]));
-                }else if(split[0].equals("illum")){
-                    if(split.length != 2){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
-                    
-                    //material.setIllumniationType();  //Still not sure exactly how to implement this
-                }else if(split[0].equals("map_Kd")){
-                    line = "";
-                    for(int index = 1;index < split.length;index++){
-                        line += split[index];
-                        if(index < split.length - 1){
-                            line += " ";
+                    continue;
+                }
+                
+                //Begin processing the arguments
+                switch(command.getCommand()){
+                    case DEFINE_MATERIAL:
+                        {
+                            String material_name = null;
+                            
+                            
+                            if(command.getParameterCount() > 1){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                            }
+                            
+                            if(command.getParameterCount() == 0){
+                                material_name = "default";
+                            }else{
+                                material_name = command.getParameters()[0];
+                            }
+                            current_material = new StrixaMaterial(material_name);
                         }
-                    }
-                    
-                    material.setTexture(line);
+                        break;
+                    case DEFINE_AMBIENT_COLOR:
+                        {
+                            if(command.getParameterCount() != 3){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                            }
+                            
+                            current_material.setAmbientColor(new float[]{
+                                Float.parseFloat(command.getParameters()[0]),
+                                Float.parseFloat(command.getParameters()[1]),
+                                Float.parseFloat(command.getParameters()[2])
+                            });
+                        }
+                        break;
+                    case DEFINE_DIFFUSE_COLOR:
+                        {
+                            if(command.getParameterCount() != 3){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                            }
+                            
+                            current_material.setDiffuseColor(new float[]{
+                                Float.parseFloat(command.getParameters()[0]),
+                                Float.parseFloat(command.getParameters()[1]),
+                                Float.parseFloat(command.getParameters()[2])
+                            });
+                        }
+                        break;
+                    case DEFINE_SPECULAR_COLOR:
+                        {
+                            if(command.getParameterCount() != 3){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                            }
+                            
+                            current_material.setSpecularColor(new float[]{
+                                Float.parseFloat(command.getParameters()[0]),
+                                Float.parseFloat(command.getParameters()[1]),
+                                Float.parseFloat(command.getParameters()[2])
+                            });
+                        }
+                        break;
+                    case DEFINE_SPECULAR_COEFFICIENT:
+                        {
+                            if(command.getParameterCount() != 1){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                            }
+                            
+                            current_material.setSpecularCoefficient(Float.parseFloat(command.getParameters()[0]));
+                        }
+                        break;
+                    case DEFINE_TRANSPARENCY:
+                        {
+                            if(command.getParameterCount() != 1){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                            }
+                            
+                            current_material.setAlpha(Float.parseFloat(command.getParameters()[0]));
+                        }
+                        break;
+                    case DEFINE_ILLUMINATION_MODEL:
+                        if(command.getParameterCount() != 1){
+                            throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                        }
+                        
+                        //material.setIllumnationType();  //TODO_HIGH:  Decide how to implement this.
+                        break;
+                    case DEFINE_DIFFUSE_TEXTURE:
+                        {
+                            File texture_file = null;
+                            
+                            
+                            if(command.getParameterCount() != 1){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + mtl_file_handle.getAbsolutePath());
+                            }
+                            
+                            
+                            texture_file = new File(command.getParameters()[0]);
+                            if(!texture_file.isAbsolute()){
+                                texture_file = new File(mtl_file_handle.getParentFile(),command.getParameters()[0]);
+                            }
+                            current_material.setTexture(texture_file.getAbsolutePath());
+                        }
+                        break;
+                    default:
+                        System.out.println("That command is invalid in the current context.");
+                        break;
                 }
             }
         }catch(FileNotFoundException e){
@@ -270,7 +379,7 @@ public class WavefrontObjReader implements Runnable{
             throw exception;  //We have to turn any IOExceptions into RuntimeExceptions 
         }finally{
             try{
-                file.close();
+                file_stream.close();
             }catch(IOException e){
                 throw new RuntimeException("Could not close file properly.");
             }
@@ -287,174 +396,212 @@ public class WavefrontObjReader implements Runnable{
     
     public void run(){
     	Command.CommandObject command = null;
-        StrixaMaterial        current_material = null;
-        String[]              face_split = null;
-        FileInputStream       file = null;
+        Strixa3DElement       current_element = null;
+        FileInputStream       file_stream = null;
         double                last_update = 0;
         String                line = null;
         int                   line_number = 0;
-        List<Point3D<Double>> normal_points = null;
-        Strixa3DElement       object =  null;
-        String                object_name = null;
-        List<StrixaPoint>     object_points = null;
-        List<StrixaPolygon>   object_polygons = null;
+        List<Vertex>          normal_vertices = null;
+        File                  obj_file_handle = null;
         double                percent_loaded = 0;
-        StrixaPolygon         polygon = null;
-        List<Point2D<Double>> texture_points = null;
+        List<Vertex>          texture_vertices = null;
         double                total_bytes = 0;
         String[]              split = null;
+        List<Vertex>          vertices = null;
         
         
         try{
-            file = new FileInputStream(this.__file_location);
-            total_bytes = file.available();
+            obj_file_handle = new File(this.__file_location);
+            file_stream = new FileInputStream(obj_file_handle);
+            total_bytes = file_stream.available();
             
-            object_points = new ArrayList<StrixaPoint>(1000);
-            normal_points = new ArrayList<Point3D<Double>>(1000);
-            texture_points = new ArrayList<Point2D<Double>>(1000);
-            object_polygons = new ArrayList<StrixaPolygon>(1000);
+            vertices = new ArrayList<Vertex>(1000);
+            normal_vertices = new ArrayList<Vertex>(1000);
+            texture_vertices = new ArrayList<Vertex>(1000);
             this.__objects = new ArrayList<Strixa3DElement>(100);
             
-            while((line = FileIO.readLine(file)) != null){
+            while((line = FileIO.readLine(file_stream)) != null){
                 line_number++;
                 
-                if(line.trim().equals("") || line.charAt(0) == '#'){
+                if(line.trim().isEmpty() || line.charAt(0) == '#'){
                     continue;  //Skip empty lines and comments
                 }
                 
                 
                 command = Command.getCOFromString(line);
                 if(command == null){
-                	System.out.println("Cannot handle input.  Line number:  " + line_number);
+                	System.out.println("Cannot handle input.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
                 	
                 	continue;
                 }
                 
                 //Begin processing the arguments
                 switch(command.getCommand()){
-                	case MTLIB:
-                		
+                	case READ_MATERIAL_LIBRARY:
+                	    {
+                	        File mtl_file_handle = null;
+                	        
+                	        
+                    		if(command.getParameterCount() > 1){
+                    		    throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
+                    		}
+                    		
+                            mtl_file_handle = new File(command.getParameters()[0]);
+                            if(!mtl_file_handle.isAbsolute()){
+                                mtl_file_handle = new File(obj_file_handle.getParentFile(),command.getParameters()[0]);
+                            }
+                            this._readMtl(mtl_file_handle.getAbsolutePath());
+                	    }
                 		break;
-                }
-                
-                split = line.split(" ");
-                if(split[0].equals("mtllib")){
-                    if(split.length == 1){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
-                    
-                    line = "";
-                    for(int index = 1;index < split.length;index++){
-                        line += split[index];
-                        if(index < split.length - 1){
-                            line += " ";
-                        }
-                    }
-                    
-                    if(!Pattern.matches("$([a-zA-Z]:|\\/).*^",line)){  //If the path given is not an absolute path
-                        split = this.__file_location.split("\\\\");  //Lol.  This is a single backslash.
-                        if(split.length == 1){
-                            split = this.__file_location.split("/");
-                        }
-                        
-                        if(split.length != 1){
-                            for(int index = split.length - 2;index >= 0;index--){
-                                line = split[index] + "/" + line;
+                	case DEFINE_OBJECT:
+                	    {
+                    	    if(command.getParameterCount() > 1){
+                    	        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
+                    	    }
+                    	    
+                    	    if(command.getParameterCount() == 1){
+                    	        //TODO_HIGH:  current_object = new Strixa3DElement(command.getParameters()[0]);
+                    	        current_element = new Strixa3DElement();
+                    	    }else{
+                    	        current_element = new Strixa3DElement();
+                    	    }
+                    	    this.__objects.add(current_element);
+                	    }
+                	    break;
+                	case DEFINE_VERTEX:
+                	    {
+                    	    double x = 0;
+                    	    double y = 0;
+                    	    double z = 0;
+                    	    double w = 0;
+                    	    
+                    	    
+                    	    if(command.getParameterCount() < 2 || command.getParameterCount() > 3){
+                    	        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
+                    	    }
+                    	    
+                    	    x = Double.parseDouble(command.getParameters()[0]);
+                    	    y = Double.parseDouble(command.getParameters()[1]);
+                    	    if(command.getParameterCount() > 2){
+                    	        z = Double.parseDouble(command.getParameters()[2]);
+                    	        if(command.getParameterCount() > 3){
+                    	            w = Double.parseDouble(command.getParameters()[3]);
+                    	        }
+                    	    }
+                    	    
+                    	    vertices.add(new Vertex(x,y,z,w));
+                	    }
+                    	break;
+                	case DEFINE_TEXTURE_VERTEX:
+                	    {
+                    	    double u = 0;  //lulz.  double u...  w...  Get it?  
+                    	    double v = 0;
+                    	    double w = 0;  //A double double u?  That's syntactically incorrect!
+                    	    
+                    	    
+                    	    if(command.getParameterCount() < 1 || command.getParameterCount() > 3){
+                    	        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
+                    	    }
+                    	    
+                    	    u = Double.parseDouble(command.getParameters()[0]);
+                    	    if(command.getParameterCount() > 1){
+                    	        v = Double.parseDouble(command.getParameters()[1]);
+                    	        if(command.getParameterCount() > 2){  //In other words 3...  
+                    	            w = Double.parseDouble(command.getParameters()[2]);
+                    	        }
+                    	    }
+                    	    
+                    	    texture_vertices.add(new Vertex(u,v,0,w));
+                	    }
+                	    break;
+                	case DEFINE_NORMAL_VERTEX:
+                	    {
+                    	    if(command.getParameterCount() != 3){
+                    	        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
+                    	    }
+                    	    
+                    	    normal_vertices.add(new Vertex(
+                	            Double.parseDouble(command.getParameters()[0]),
+                	            Double.parseDouble(command.getParameters()[1]),
+                	            Double.parseDouble(command.getParameters()[2]),
+                	            0
+                    	    ));
+                	    }
+                	    break;
+                	case USE_MATERIAL:
+                	    {
+                    	    StrixaMaterial material = null;
+                    	    String         material_name = null;
+                    	    
+                    	    
+                    	    if(command.getParameterCount() > 1){
+                                throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
                             }
-                        }
-                    }
-                    
-                    this._readMtl(line);
-                }else if(split[0].equals("o")){
-                    if(split.length < 2){
-                        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number);
-                    }
-                    
-                    object_name = split[1];
-                    if(object != null){
-                        object.addComponents(object_polygons);
-                        object.setMaterial(current_material);
-                        
-                        this.__objects.add(object);
-                    }
-                    
-                    object = new Strixa3DElement();
-                }else if(split[0].equals("v")){
-                    if(split.length < 3){
-                        throw new RuntimeException("Object line incorrectly formatted!  Line number:  " + line_number);
-                    }else{
-                        object_points.add(new StrixaPoint(Double.parseDouble(split[1]),Double.parseDouble(split[2]),Double.parseDouble(split[3]),Color.WHITE,(byte)1));
-                    }
-                }else if(split[0].equals("vt")){
-                    if(split.length < 2){
-                        throw new RuntimeException("Object line incorrectly formatted!  Line number:  " + line_number);
-                    }else{
-                        texture_points.add(new Point2D<Double>(Double.parseDouble(split[1]),Double.parseDouble(split[2])));
-                    }
-                }else if(split[0].equals("vn")){
-                    if(split.length < 3){
-                        throw new RuntimeException("Object line incorrectly formatted!  Line number:  " + line_number);
-                    }else{
-                        normal_points.add(new Point3D<Double>(Double.parseDouble(split[1]),Double.parseDouble(split[2]),Double.parseDouble(split[1])));
-                    }
-                }else if(split[0].equals("usemtl")){
-                    if(split.length == 1){
-                        line = "anonymous";
-                    }else{
-                        line = split[1];
-                    }
-                    
-                    current_material = StrixaMaterial.getMaterialByName(line);
-                    if(current_material == null){
-                        System.out.println("Warning:  Material with name " + line + " could not be found.  Line number " + line_number);
-                    }
-                }else if(split[0].equals("f")){  //This shouldn't occur until all the vertices have been given.
-                    if(split.length < 4){  //A face must have at least 3 points
-                        throw new RuntimeException("Object line incorrectly formatted!  Line number:  " + line_number);
-                    }else{
-                        polygon = new StrixaPolygon();
-                        for(int index = 1;index < split.length; index++){                            
-                            try{
-                                face_split = split[index].split("/");
-                                
-                                polygon.addPoint(object_points.get(Integer.parseInt(face_split[0]) - 1));  //The verticies for the faces start at 1
-                                if(face_split.length > 1){
-                                    if(!face_split[1].equals("")){
-                                        polygon.addTexturePoint(texture_points.get(Integer.parseInt(face_split[1]) - 1));
-                                    }
-                                
-                                    if(face_split.length > 2){
-                                        if(!face_split[2].equals("")){
-                                            polygon.addNormalPoint(normal_points.get(Integer.parseInt(face_split[2]) - 1));
-                                        }
-                                    }
+                    	    
+                    	    if(command.getParameterCount() == 0){
+                                material_name = "default";
+                            }else{
+                                material_name = command.getParameters()[0];
+                            }
+                            
+                            material = StrixaMaterial.getMaterialByName(material_name);
+                            if(material == null){
+                                System.out.println("Warning:  Material with name " + line + " could not be found.  Line number " + line_number + " in " + obj_file_handle.getAbsolutePath());
+                            }else{
+                                current_element.setMaterial(material);
+                            }
+                	    }
+                        break;
+                	case DEFINE_FACE:
+                	    {
+                    	    String[]      explosion = null;
+                    	    StrixaPolygon polygon = null;
+                    	    
+                    	    
+                    	    if(command.getParameterCount() < 3){  //A face must have at least 3 points
+                    	        throw new IOException("Invalid number of arguments given.  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
+                            }
+                    	    
+                    	    polygon = new StrixaPolygon();
+                    	    for(int parameter_index = 0,parameter_end_index = command.getParameterCount() - 1;parameter_index <= parameter_end_index;parameter_index++){
+                    	        try{
+                    	            explosion = command.getParameters()[parameter_index].split("/");
+                    	            
+                    	            polygon.addPoint(vertices.get(Integer.parseInt(explosion[0]) - 1));
+                    	            if(explosion.length > 1){
+                    	                if(!explosion[1].isEmpty()){
+                    	                    polygon.addTexturePoint(texture_vertices.get(Integer.parseInt(explosion[1]) - 1));
+                    	                }
+                    	                
+                    	                if(explosion.length > 2){
+                    	                    if(!explosion[2].isEmpty()){
+                                                polygon.addNormalPoint(normal_vertices.get(Integer.parseInt(explosion[2]) - 1));
+                                            }
+                    	                }
+                    	            }
+                    	        }catch(IndexOutOfBoundsException e){
+                                    throw new RuntimeException("Given vertex was not found!  Line number:  " + line_number + " in " + obj_file_handle.getAbsolutePath());
                                 }
-                            }catch(IndexOutOfBoundsException e){
-                                throw new RuntimeException("Given vertex was not found!  Requested vertex:  " + split[index] + ".  Line number:  " + line_number);
-                            }
-                        }
-                        
-                        object_polygons.add(polygon);
-                    }
+                    	    }
+                            
+                    	    current_element.addComponent(polygon);
+                	    }
+                	    break;
+                	default:
+                	    System.out.println("That command is invalid in the current context.");
+                	    break;
                 }
                 
                 
-                percent_loaded = ((total_bytes - file.available()) / total_bytes) * 100;
+                percent_loaded = ((total_bytes - file_stream.available()) / total_bytes) * 100;
                 if((percent_loaded - last_update) > this.__update_step && percent_loaded < 100){  //We want to reserve the 100% loaded update for when this method completes its run
                     this._alertPercentLoadedUpdateListeners(percent_loaded);
                     
                     last_update = percent_loaded;
                 }
             }
-            
-            if(!object_polygons.isEmpty()){ //This ensures that the last object gets added to the list.
-                object.addComponents(object_polygons);
-                object.setMaterial(current_material);
-                
-                this.__objects.add(object);
-            }
         }catch(FileNotFoundException e){
-            throw new RuntimeException("No such file was found in the given path:  "+this.__file_location);
+            throw new RuntimeException("No such file was found in the given path:  " + obj_file_handle.getAbsolutePath());
         }catch(IOException e){
             RuntimeException exception = null; 
             
@@ -464,7 +611,7 @@ public class WavefrontObjReader implements Runnable{
             throw exception;  //We have to turn any IOExceptions into RuntimeExceptions 
         }finally{
             try{
-                file.close();
+                file_stream.close();
             }catch(IOException e){
                 throw new RuntimeException("Could not close file properly.");
             }

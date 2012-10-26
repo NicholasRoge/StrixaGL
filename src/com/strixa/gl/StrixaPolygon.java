@@ -7,8 +7,8 @@ package com.strixa.gl;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.strixa.gl.StrixaPoint.StrixaPointLocationUpdateListener;
 import com.strixa.gl.properties.Cuboid;
+import com.strixa.gl.util.Vertex;
 import com.strixa.util.Line;
 import com.strixa.util.Point2D;
 import com.strixa.util.Point3D;
@@ -18,7 +18,7 @@ import com.strixa.util.Point3D;
  *
  * @author Nicholas Rogé
  */
-public class StrixaPolygon implements StrixaPointLocationUpdateListener{
+public class StrixaPolygon{
     /**
      * Classes wishing to receive updates from this polygon should implement this interface.
      *
@@ -34,9 +34,9 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
     }
     
     private final Point3D<Double>                   __coordinates = new Point3D<Double>(0.0,0.0,0.0);
-    private final List<Point3D<Double>>             __normal_points = new ArrayList<Point3D<Double>>();
-    private final List<StrixaPoint>                 __points = new ArrayList<StrixaPoint>();
-    final List<Point2D<Double>>                     __texture_points = new ArrayList<Point2D<Double>>();
+    private final List<Vertex>                      __normal_points = new ArrayList<Vertex>();
+    private final List<Vertex>                      __points = new ArrayList<Vertex>();
+    final List<Vertex>                              __texture_points = new ArrayList<Vertex>();
     private final List<StrixaPolygonUpdateListener> __update_listeners = new ArrayList<StrixaPolygonUpdateListener>();
     
     private Cuboid         __bounding_box;
@@ -65,7 +65,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @return The list of normal points.
      */
-    public List<Point3D<Double>> getNormalPoints(){
+    public List<Vertex> getNormalPoints(){
         return this.__normal_points;
     }
     
@@ -74,7 +74,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @return The list of coordinate points.
      */
-    public List<StrixaPoint> getPoints(){
+    public List<Vertex> getPoints(){
         return this.__points;
     }
     
@@ -84,7 +84,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @return The list of texture points.
      */
-    public List<Point2D<Double>> getTexturePoints(){
+    public List<Vertex> getTexturePoints(){
         return this.__texture_points;
     }
     
@@ -126,7 +126,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param point Normal point to be added.
      */
-    public void addNormalPoint(Point3D<Double> point){
+    public void addNormalPoint(Vertex point){
         this.__normal_points.add(point);
         
         this._notifiyStrixaPolygonUpdateListeners();
@@ -137,7 +137,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param normal_points List of normal points to be added.
      */
-    public void addNormalPoints(List<Point3D<Double>> normal_points){
+    public void addNormalPoints(List<Vertex> normal_points){
         this.__normal_points.addAll(normal_points);
         
         this._notifiyStrixaPolygonUpdateListeners();
@@ -148,7 +148,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param point Point to be added.
      */
-    public void addPoint(StrixaPoint point){
+    public void addPoint(Vertex point){
         this.__points.add(point);
         
         this._notifiyStrixaPolygonUpdateListeners();
@@ -159,7 +159,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param points Point list to be added.
      */
-    public void addPoints(List<StrixaPoint> points){
+    public void addPoints(List<Vertex> points){
         this.__points.addAll(points);
         
         this._notifiyStrixaPolygonUpdateListeners();
@@ -170,7 +170,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param texture_point Texture point to be added.
      */
-    public void addTexturePoint(Point2D<Double> texture_point){
+    public void addTexturePoint(Vertex texture_point){
         this.__texture_points.add(texture_point);
         
         this._notifiyStrixaPolygonUpdateListeners();
@@ -181,7 +181,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param texture_points Texture points to be added.
      */
-    public void addTexturePoints(List<Point2D<Double>> texture_points){
+    public void addTexturePoints(List<Vertex> texture_points){
         this.__texture_points.addAll(texture_points);
         
         this._notifiyStrixaPolygonUpdateListeners();
@@ -269,7 +269,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
         }
     }
     
-    public void onStrixaPointLocationUpdate(StrixaPoint point){
+    public void onVertexLocationUpdate(Vertex point){
         this._regenerateBoundingBox();
         
         this._notifiyStrixaPolygonUpdateListeners();
@@ -279,11 +279,11 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * Regenerates the element's bounding box.
      */
     protected void _regenerateBoundingBox(){
-        final List<StrixaPoint> points = this.getPoints();
+        final List<Vertex>      points = this.getPoints();
         final int               point_count = points.size();
         final Point3D<Double>   this_coordinates = this.getCoordinates();
         
-        Point3D<Double> coordinates = null;
+        Vertex coordinates = null;
         double          depth = 0.0;
         double          height = 0.0;
         double          width = 0.0;
@@ -295,7 +295,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
             depth = this_coordinates.getZ();
             
             for(int index = 0;index < point_count;index++){
-                coordinates = points.get(index).getCoordinates();
+                coordinates = points.get(index);
                 
                 
                 width = Math.max(width,coordinates.getX());
@@ -321,7 +321,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param point Point to remove.
      */
-    public void removePoint(StrixaPoint point){
+    public void removePoint(Vertex point){
         if(this.__points.contains(point)){
             this.__points.remove(point);
             
@@ -345,7 +345,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * 
      * @param points The list of points for this polygon to draw.
      */
-    protected void _setPoints(List<StrixaPoint> points){
+    protected void _setPoints(List<Vertex> points){
         this.__points.clear();
         this.__points.addAll(points);
     }
@@ -361,57 +361,7 @@ public class StrixaPolygon implements StrixaPointLocationUpdateListener{
      * @return Returns true if this object is colliding with the given object, and false, otherwise. 
      */
     public boolean isColliding(StrixaPolygon element){  //TODO_HIGH:  This method needs heavy optimization.  Rather than creating a bunch of new objects, a list could be created, for example.        
-        final int this_point_count = this.__points.size();
-        final int element_point_count = element.__points.size();
-        
-        Point3D<Double> adjusted_point_one = null;
-        Point3D<Double> adjusted_point_two = null;
-        Line polygon_one_line = null;
-        Line polygon_two_line = null;
-        
-        
-        for(int index=0;index<this_point_count;index++){
-            /*Set up the first point*/
-            if(index==0){
-                adjusted_point_one = new Point3D<Double>(this.__points.get(this_point_count-1).getCoordinates());
-            }else{
-                adjusted_point_one = new Point3D<Double>(this.__points.get(index-1).getCoordinates());
-                
-            }
-            adjusted_point_one.setX(adjusted_point_one.getX()+this.getCoordinates().getX());
-            adjusted_point_one.setY(adjusted_point_one.getY()+this.getCoordinates().getY());
-            
-            /*Set up the second point*/
-            adjusted_point_two = new Point3D<Double>(this.__points.get(index).getCoordinates());
-            adjusted_point_two.setX(adjusted_point_two.getX()+this.getCoordinates().getX());
-            adjusted_point_two.setY(adjusted_point_two.getY()+this.getCoordinates().getY());
-            
-            /*Create teh first line*/
-            polygon_one_line = new Line(adjusted_point_one,adjusted_point_two);
-            
-            for(int sub_index=0;sub_index<element_point_count;sub_index++){
-                if(sub_index==0){
-                    adjusted_point_one = new Point3D<Double>(element.__points.get(element_point_count-1).getCoordinates());
-                }else{
-                    adjusted_point_one = new Point3D<Double>(element.__points.get(sub_index-1).getCoordinates());
-                }
-                adjusted_point_one.setX(adjusted_point_one.getX()+element.getCoordinates().getX());
-                adjusted_point_one.setY(adjusted_point_one.getY()+element.getCoordinates().getY());
-                
-                adjusted_point_two = new Point3D<Double>(element.__points.get(sub_index).getCoordinates());
-                adjusted_point_two.setX(adjusted_point_two.getX()+element.getCoordinates().getX());
-                adjusted_point_two.setY(adjusted_point_two.getY()+element.getCoordinates().getY());
-                
-                polygon_two_line = new Line(adjusted_point_one,adjusted_point_two);
-                
-                if(Line.getIntersectionPoint(polygon_one_line,polygon_two_line)!=null){
-                    return true;
-                }
-            }
-            
-            /*Now check for 3-Dimensional collision*/
-            //TODO_HIGH:  Check for 3-Dimensional collision...  Rofl.
-        }
+        //TODO_HIGH:  Code temporarily removed from this method
         
         return false;
     }
