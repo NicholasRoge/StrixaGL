@@ -9,35 +9,19 @@ import java.util.List;
 
 import com.strixa.gl.properties.Cuboid;
 import com.strixa.gl.util.Vertex;
-import com.strixa.util.Line;
-import com.strixa.util.Point2D;
 import com.strixa.util.Point3D;
 
 /**
- * TODO:  Write Class Description
+ * Describes any useful information about a polygon.
  *
  * @author Nicholas Rogé
  */
-public class StrixaPolygon{
-    /**
-     * Classes wishing to receive updates from this polygon should implement this interface.
-     *
-     * @author Nicholas Rogé
-     */
-    public interface StrixaPolygonUpdateListener{
-        /**
-         * Called when a polygon performs an update.
-         * 
-         * @param polygon Polygon which has been updated.
-         */
-        public void onStrixaPolygonUpdate(StrixaPolygon polygon);
-    }
-    
-    private final Point3D<Double>                   __coordinates = new Point3D<Double>(0.0,0.0,0.0);
-    private final List<Vertex>                      __normal_points = new ArrayList<Vertex>();
-    private final List<Vertex>                      __points = new ArrayList<Vertex>();
-    final List<Vertex>                              __texture_points = new ArrayList<Vertex>();
-    private final List<StrixaPolygonUpdateListener> __update_listeners = new ArrayList<StrixaPolygonUpdateListener>();
+public class StrixaPolygon{    
+    private final Point3D<Double>       __coordinates = new Point3D<Double>(0.0,0.0,0.0);
+    private final List<Vertex>          __normal_points = new ArrayList<Vertex>();
+    private final List<Vertex>          __points = new ArrayList<Vertex>();
+    private final List<Vertex>          __texture_points = new ArrayList<Vertex>();
+    private final List<Strixa3DElement> __parents = new ArrayList<Strixa3DElement>();
     
     private Cuboid         __bounding_box;
     
@@ -98,6 +82,15 @@ public class StrixaPolygon{
     }
     
     /**
+     * Gets an array of {@link Strixa3DElement} to which this polygon is associated.
+     * 
+     * @return An array of {@link Strixa3DElement} to which this polygon is associated.
+     */
+    public Strixa3DElement[] getParents(){
+        return this.__parents.toArray(new Strixa3DElement[this.__parents.size()]);
+    }
+    
+    /**
      * Changes this polygon's location.
      * 
      * @param coordinates Coordinates to move this polygon to.
@@ -115,8 +108,6 @@ public class StrixaPolygon{
      */
     public void setCoordinates(double x,double y,double z){
         this.__coordinates.setPoint(x,y,z);
-        
-        this._notifiyStrixaPolygonUpdateListeners();
     }
     /*End Getter/Setter Methods*/
     
@@ -128,8 +119,6 @@ public class StrixaPolygon{
      */
     public void addNormalPoint(Vertex point){
         this.__normal_points.add(point);
-        
-        this._notifiyStrixaPolygonUpdateListeners();
     }
     
     /**
@@ -139,8 +128,18 @@ public class StrixaPolygon{
      */
     public void addNormalPoints(List<Vertex> normal_points){
         this.__normal_points.addAll(normal_points);
-        
-        this._notifiyStrixaPolygonUpdateListeners();
+    }
+    
+    /**
+     * Adds a {@link Strixa3DElement} to this polygon, enabling it to communicate with it's parent.<br />
+     * <strong>Note:</strong>  This method should typically only be called internally by Strixa3DElement.
+     * 
+     * @param parent Parent element.
+     */
+    public void addParent(Strixa3DElement parent){
+        if(!this.__parents.contains(parent)){
+            this.__parents.add(parent);
+        }
     }
     
     /**
@@ -151,7 +150,7 @@ public class StrixaPolygon{
     public void addPoint(Vertex point){
         this.__points.add(point);
         
-        this._notifiyStrixaPolygonUpdateListeners();
+        this.invalidate();
     }
     
     /**
@@ -162,7 +161,7 @@ public class StrixaPolygon{
     public void addPoints(List<Vertex> points){
         this.__points.addAll(points);
         
-        this._notifiyStrixaPolygonUpdateListeners();
+        this.invalidate();
     }
     
     /**
@@ -172,8 +171,6 @@ public class StrixaPolygon{
      */
     public void addTexturePoint(Vertex texture_point){
         this.__texture_points.add(texture_point);
-        
-        this._notifiyStrixaPolygonUpdateListeners();
     }
     
     /**
@@ -183,18 +180,16 @@ public class StrixaPolygon{
      */
     public void addTexturePoints(List<Vertex> texture_points){
         this.__texture_points.addAll(texture_points);
-        
-        this._notifiyStrixaPolygonUpdateListeners();
     }
     
     /**
-     * Adds a listener to be called if anything happens to update this polygon.
-     * 
-     * @param listener Listener to be called.
+     * Indicates that something about this element has changed, and that it should be recreated.
      */
-    public void addStrixaPolygonUpdateListener(StrixaPolygonUpdateListener listener){
-        if(!this.__update_listeners.contains(listener)){
-            this.__update_listeners.add(listener);
+    public void invalidate(){
+        this._regenerateBoundingBox();
+        
+        for(int index = 0,end_index = this.__parents.size() - 1;index <= end_index;index++){
+            this.__parents.get(index).invalidate();
         }
     }
     
@@ -261,21 +256,6 @@ public class StrixaPolygon{
     }
     
     /**
-     * Notifies any listeners that there has been an update to this polygon.
-     */
-    protected void _notifiyStrixaPolygonUpdateListeners(){
-        for(StrixaPolygonUpdateListener listener:StrixaPolygon.this.__update_listeners){
-            listener.onStrixaPolygonUpdate(StrixaPolygon.this);
-        }
-    }
-    
-    public void onVertexLocationUpdate(Vertex point){
-        this._regenerateBoundingBox();
-        
-        this._notifiyStrixaPolygonUpdateListeners();
-    }
-    
-    /**
      * Regenerates the element's bounding box.
      */
     protected void _regenerateBoundingBox(){
@@ -325,18 +305,18 @@ public class StrixaPolygon{
         if(this.__points.contains(point)){
             this.__points.remove(point);
             
-            this._notifiyStrixaPolygonUpdateListeners();
+            this.invalidate();
         }
     }
     
     /**
-     * Removes the requested listener from the update list.
+     * Removes the requested parent from the polygon.
      * 
-     * @param listener Listener to be removed.
-     */
-    public void removeStrixaPolygonUpdateListener(StrixaPolygonUpdateListener listener){
-        if(this.__update_listeners.contains(listener)){
-            this.__update_listeners.remove(listener);
+     * @param parent Parent to be removed.
+     *///See also:  PPA, the Polygon Protection Agency.
+    public void removeParent(Strixa3DElement parent){
+        if(this.__parents.contains(parent)){
+            this.__parents.remove(parent);
         }
     }
 

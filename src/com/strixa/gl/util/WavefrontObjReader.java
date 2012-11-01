@@ -4,23 +4,16 @@
  */
 package com.strixa.gl.util;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
-
 import com.strixa.gl.Strixa3DElement;
 import com.strixa.gl.StrixaMaterial;
-import com.strixa.gl.StrixaPoint;
 import com.strixa.gl.StrixaPolygon;
 import com.strixa.util.FileIO;
-import com.strixa.util.Point2D;
-import com.strixa.util.Point3D;
 
 
 /**
@@ -56,6 +49,11 @@ public class WavefrontObjReader implements Runnable{
 		USE_MATERIAL("usemtl");
 		
 		
+	    /**
+	     * Contains a valid {@link Command} and a set of related parameters.
+	     *
+	     * @author Nicholas Rogé
+	     */
 		private static class CommandObject{
 			private Command   __command;
 			private String[]  __parameters;
@@ -112,7 +110,7 @@ public class WavefrontObjReader implements Runnable{
 		/**
 		 * Gets a {@link CommandObject} from the specified string.
 		 * 
-		 * @param command_string
+		 * @param command_string String containing a command.
 		 * 
 		 * @return Returns an instantiated {@link CommandObject} if a successful command is found, and null, otherwise.
 		 */
@@ -386,6 +384,11 @@ public class WavefrontObjReader implements Runnable{
         }
     }
     
+    /**
+     * Removes the given listener from the update list.
+     * 
+     * @param listener Listener to be removed.
+     */
     public void removePercentLoadedUpdateListener(PercentLoadedUpdateListener listener){
         if(this.__percent_loaded_listeners.contains(listener)){
             this.__percent_loaded_listeners.remove(listener);
@@ -406,7 +409,6 @@ public class WavefrontObjReader implements Runnable{
         double                percent_loaded = 0;
         List<Vertex>          texture_vertices = null;
         double                total_bytes = 0;
-        String[]              split = null;
         List<Vertex>          vertices = null;
         
         
@@ -473,7 +475,7 @@ public class WavefrontObjReader implements Runnable{
                     	    double x = 0;
                     	    double y = 0;
                     	    double z = 0;
-                    	    double w = 0;
+                    	    double w = 1;
                     	    
                     	    
                     	    if(command.getParameterCount() < 2 || command.getParameterCount() > 3){
@@ -496,7 +498,7 @@ public class WavefrontObjReader implements Runnable{
                 	    {
                     	    double u = 0;  //lulz.  double u...  w...  Get it?  
                     	    double v = 0;
-                    	    double w = 0;  //A double double u?  That's syntactically incorrect!
+                    	    double w = 1;  //A double double u?  That's syntactically incorrect!
                     	    
                     	    
                     	    if(command.getParameterCount() < 1 || command.getParameterCount() > 3){
@@ -621,6 +623,11 @@ public class WavefrontObjReader implements Runnable{
         this._alertPercentLoadedUpdateListeners(100);
     }
     
+    /**
+     * Gets the {@link Strixa3DElements} that were read in using this tool.
+     * 
+     * @return The {@link Strixa3DElements} that were read in using this tool.
+     */
     public Strixa3DElement[] getElements(){
         if(!this.__file_read){
             throw new RuntimeException("You must first call read on this object to read from the file.");

@@ -19,8 +19,6 @@ import com.strixa.gl.properties.Cuboid;
 import com.strixa.util.Point3D;
 
 /**
- * TODO:  Write Class Description
- *
  * @author Nicholas Rogé
  */
 public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMotionListener,MouseListener{
@@ -62,12 +60,16 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
     @Override public void init(GLAutoDrawable drawable){
         super.init(drawable);
         
+        drawable.getGL().getGL2().glClearDepth(1);
         drawable.getGL().getGL2().glEnable(GL2.GL_DEPTH_TEST);
         drawable.getGL().getGL2().glDepthFunc(GL2.GL_LESS);
         
         drawable.getGL().getGL2().glShadeModel(GL2.GL_SMOOTH);
         drawable.getGL().getGL2().glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT,GL2.GL_NICEST);
         drawable.getGL().getGL2().glClearColor(0f,0f,0f,1f);
+        
+        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHT0);
+        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHTING);  
     }
     
     @Override public void reshape(GLAutoDrawable drawable,int x,int y,int width,int height){
@@ -219,6 +221,11 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         }
     }
     
+    /**
+     * Moves the camera forward or backwards some number of units.
+     * 
+     * @param units Number of units to advance.  If this number is negative, the camera will be moved backwards.
+     */
     public void advanceCamera(double units){
         if(units==0){
             return;
@@ -241,20 +248,7 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
             return;
         }        
         
-        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_AMBIENT,new float[]{0f,0f,0f,1f},0);
-        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_DIFFUSE,new float[]{1f,1f,1f,1f},0);
-        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_SPECULAR,new float[]{1f,1f,1f,1f},0);
-        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_POSITION,new float[]{2f,2f,-2f,0f},0);
-        
-        gl.glEnable(GL2.GL_LIGHT0);
-        gl.glEnable(GL2.GL_LIGHTING);
-        gl.glEnable(GL2.GL_COLOR_MATERIAL);
-        gl.glColorMaterial(GL2.GL_FRONT_FACE,GL2.GL_AMBIENT_AND_DIFFUSE);
-        
-        /*gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_AMBIENT,new float[]{.3f,.5f,.1f,1f},0);
-        gl.glMaterialfv(GL2.GL_FRONT,GL2.GL_SPECULAR,new float[]{.3f,.5f,.1f,1f},0);
-        gl.glMaterialf(GL2.GL_FRONT,GL2.GL_SHININESS,.5f);*/
-        
+        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_POSITION,new float[]{2f,2f,-2f,0f},0);      
         
         gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
@@ -327,9 +321,7 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         ));
     }
     
-    protected void _refreshCamera(){
-        //TODO_HIGH:  Get this method hooked up with some actual measurements...
-        
+    protected void _refreshCamera(){        
         this.__camera_looking_at_point.setX(this.__camera_location.getX()+Math.sin((this.getCameraRotation()*Math.PI)/180));
         this.__camera_looking_at_point.setY(0.0);
         this.__camera_looking_at_point.setZ(this.__camera_location.getZ()+Math.cos((this.getCameraRotation()*Math.PI)/180));
@@ -365,6 +357,11 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         this._refreshCamera();
     }
     
+    /**
+     * Moves the camera some number of units left or right.
+     * 
+     * @param units Number of units to strafe.  If this number is negative, the camera will be shifted to the left.
+     */
     public void strafeCamera(double units){
         if(units==0){
             return;

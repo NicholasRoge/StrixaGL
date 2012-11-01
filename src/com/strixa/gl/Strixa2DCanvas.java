@@ -15,7 +15,6 @@ import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.glu.GLU;
 
 import com.strixa.gl.properties.Cuboid;
-import com.strixa.util.Dimension2D;
 import com.strixa.util.Point2D;
 import com.strixa.util.Point3D;
 

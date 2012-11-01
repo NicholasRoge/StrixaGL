@@ -24,7 +24,7 @@ import com.jogamp.opengl.util.texture.TextureIO;
 public class StrixaMaterial{
 	private static final Map<String,StrixaMaterial> __material_map = new HashMap<String,StrixaMaterial>(); 
 	
-    float                 __alpha;
+    Float                 __alpha;
     float[]               __ambient_color;
     float[]               __diffuse_color;
     String                __name;
@@ -36,9 +36,9 @@ public class StrixaMaterial{
     
     {
         this.__alpha = 1f;
-        this.__ambient_color = new float[]{1f,1f,1f};
-        this.__diffuse_color = new float[]{1f,1f,1f};
-        this.__specular_color = new float[]{1f,1f,1f};
+        this.__ambient_color = new float[]{0f,0f,0f,1f};
+        this.__diffuse_color = new float[]{1f,1f,1f,1f};
+        this.__specular_color = new float[]{1f,1f,1f,1f};
         this.__specular_coefficient = 0f;
         this.__texture = null;
         this.__texture_file_location = null;
@@ -136,36 +136,154 @@ public class StrixaMaterial{
      * Sets the material's ambient color. 
      * 
      * @param color The material's ambient color as a float array with length 3.  Each element represents a red, green, or blue component of the color where a value of 0 indicates no intensity, and 1 indicates full intensity.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if:
+     * <ul>
+     *     <li>Argument 'color' is null.</li>
+     *     <li>Argument 'color' does not have exactly 3 elements.</li>
+     *     <li>Any of the given colors value's are less than 0 or greater than 1.</li>
+     * </ul>
      */
     public void setAmbientColor(float[] color){
-        this.__ambient_color = color;
+        if(color == null || color.length != 3){
+            throw new IllegalArgumentException();
+        }
+        
+        this.setAmbientColor(color[0],color[1],color[2]);
+    }
+    
+    /**
+     * Sets the material's ambient color.
+     * 
+     * @param red Red component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param green Green component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param blue Blue component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if any of the given colors value's are less than 0 or greater than 1.
+     */
+    public void setAmbientColor(float red,float green,float blue){
+        if(
+            red < 0 || red > 1
+            ||
+            green < 0 || green > 1
+            ||
+            blue < 0 || blue > 1
+        ){
+            throw new IllegalArgumentException();
+        }
+        
+        this.__ambient_color[0] = red;
+        this.__ambient_color[1] = green;
+        this.__ambient_color[2] = blue;
     }
     
     /**
      * Sets this material's alpha value.
      * 
      * @param alpha The material's alpha value.  A value of 1 indicates a fully opaque material, and a value of 0 indicates a fully transparent material.
+     * 
+     * @throws IllegalArgumentException Will be thrown if the 'alpha' argument is less than 0 or greater than 1.
      */
     public void setAlpha(float alpha){
+        if(alpha < 0 || alpha > 1){
+            throw new IllegalArgumentException();
+        }
+        
         this.__alpha = alpha;
+        
+        this.__ambient_color[3] = alpha;
+        this.__diffuse_color[3] = alpha;
+        this.__specular_color[3] = alpha;
     }
     
     /**
      * Sets the material's diffuse color. 
      * 
      * @param color The material's diffuse color as a float array with length 3.  Each element represents a red, green, or blue component of the color where a value of 0 indicates no intensity, and 1 indicates full intensity.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if:
+     * <ul>
+     *     <li>Argument 'color' is null.</li>
+     *     <li>Argument 'color' does not have exactly 3 elements.</li>
+     *     <li>Any of the given colors value's are less than 0 or greater than 1.</li>
+     * </ul>
      */
     public void setDiffuseColor(float[] color){
-        this.__diffuse_color = color;
+        if(color == null || color.length != 3){
+            throw new IllegalArgumentException();
+        }
+        
+        this.setDiffuseColor(color[0],color[1],color[2]);
+    }
+    
+    /**
+     * Sets the material's diffuse color.
+     * 
+     * @param red Red component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param green Green component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param blue Blue component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if any of the given colors value's are less than 0 or greater than 1.
+     */
+    public void setDiffuseColor(float red,float green,float blue){
+        if(
+            red < 0 || red > 1
+            ||
+            green < 0 || green > 1
+            ||
+            blue < 0 || blue > 1
+        ){
+            throw new IllegalArgumentException();
+        }
+        
+        this.__diffuse_color[0] = red;
+        this.__diffuse_color[1] = green;
+        this.__diffuse_color[2] = blue;
     }
     
     /**
      * Sets the material's specular color. 
      * 
      * @param color The material's specular color as a float array with length 3.  Each element represents a red, green, or blue component of the color where a value of 0 indicates no intensity, and 1 indicates full intensity.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if:
+     * <ul>
+     *     <li>Argument 'color' is null.</li>
+     *     <li>Argument 'color' does not have exactly 3 elements.</li>
+     *     <li>Any of the given colors value's are less than 0 or greater than 1.</li>
+     * </ul>
      */
     public void setSpecularColor(float[] color){
-        this.__specular_color = color;
+        if(color == null || color.length != 3){
+            throw new IllegalArgumentException();
+        }
+        
+        this.setSpecularColor(color[0],color[1],color[2]);
+    }
+    
+    /**
+     * Sets the material's specular color.
+     * 
+     * @param red Red component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param green Green component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param blue Blue component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if any of the given colors value's are less than 0 or greater than 1.
+     */
+    public void setSpecularColor(float red,float green,float blue){
+        if(
+            red < 0 || red > 1
+            ||
+            green < 0 || green > 1
+            ||
+            blue < 0 || blue > 1
+        ){
+            throw new IllegalArgumentException();
+        }
+        
+        this.__specular_color[0] = red;
+        this.__specular_color[1] = green;
+        this.__specular_color[2] = blue;
     }
     
     /**
@@ -243,7 +361,7 @@ public class StrixaMaterial{
         }
         
         if(this.__texture != null){
-            this.__texture.dispose(gl);
+            this.__texture.destroy(gl);
         }
         this.__texture = TextureIO.newTexture(new File(this.__texture_file_location),false);
         this.__texture.setTexParameteri(gl,GL2.GL_TEXTURE_MAG_FILTER, GL2.GL_NEAREST);
