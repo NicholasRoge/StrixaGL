@@ -263,23 +263,24 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
             this.getRenderDistance(),
             0
         );
-        glu.gluLookAt(
-            //Camera Location
-            this.__camera_location.getX(),
-            this.__camera_location.getY(),
-            this.__camera_location.getZ(),
-            //Looking at what?
-            this.__camera_looking_at_point.getX(),
-            this.__camera_looking_at_point.getY(),
-            this.__camera_looking_at_point.getZ(),
-            //Where is up?
-            0,
-            1,
-            0
-        );
 
-        
         gl.glMatrixMode(GL2.GL_MODELVIEW);
+        gl.glLoadIdentity();
+        
+        glu.gluLookAt(
+                //Camera Location
+                this.__camera_location.getX(),
+                this.__camera_location.getY(),
+                this.__camera_location.getZ(),
+                //Looking at what?
+                this.__camera_looking_at_point.getX(),
+                this.__camera_looking_at_point.getY(),
+                this.__camera_looking_at_point.getZ(),
+                //Where is up?
+                0,
+                1,
+                0
+            );
         
         
         

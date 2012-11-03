@@ -97,7 +97,7 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
         drawable.setGL(new DebugGL2(drawable.getGL().getGL2()));
         final GL2 gl = drawable.getGL().getGL2();
         
-        
+        gl.glDisable(GL2.GL_CULL_FACE);
         gl.glClearColor(1f,0f,0f,1f);
         gl.setSwapInterval(1);
         
