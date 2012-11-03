@@ -51,33 +51,34 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         this.setCamera(0,0,0);
         this.setRenderDistance(100);
         
-        this._refreshViewableArea();
-        this._refreshCamera();
+        this.invalidate();
     }
     /*End Constructors*/
     
     /*Begin Overridden Methods*/ 
     @Override public void init(GLAutoDrawable drawable){
+        final GL2 gl = drawable.getGL().getGL2();
+        
+        
         super.init(drawable);
         
-        drawable.getGL().getGL2().glClearDepth(1);
-        drawable.getGL().getGL2().glEnable(GL2.GL_DEPTH_TEST);
-        drawable.getGL().getGL2().glDepthFunc(GL2.GL_LESS);
+        gl.glEnable(GL2.GL_DEPTH_TEST);
+        gl.glDepthFunc(GL2.GL_LEQUAL);
         
-        drawable.getGL().getGL2().glShadeModel(GL2.GL_SMOOTH);
-        drawable.getGL().getGL2().glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT,GL2.GL_NICEST);
-        drawable.getGL().getGL2().glClearColor(0f,0f,0f,1f);
+        gl.glClearDepth(1);
         
-        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHT0);
-        drawable.getGL().getGL2().glEnable(GL2.GL_LIGHTING);  
+        /*gl.glShadeModel(GL2.GL_SMOOTH);
+        gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT,GL2.GL_NICEST);*/
+        
+        gl.glEnable(GL2.GL_LIGHT0);
+        gl.glEnable(GL2.GL_LIGHTING);  
     }
     
     @Override public void reshape(GLAutoDrawable drawable,int x,int y,int width,int height){
         super.reshape(x,y,width,height);
         
         this.setAspectRatio((double)width/(double)height);
-        this._refreshViewableArea();
-        this._refreshCamera();
+        this.invalidate();
     }
     /*End Overridden Methods*/
     
@@ -238,6 +239,8 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         );
     }
     
+    boolean hoopla = true;
+    int angle = 0;
     protected void _drawChildren(GL2 gl){
         final List<Strixa3DElement> children = this.getChildren();      
         final int                   child_count = children.size();
@@ -248,16 +251,17 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
             return;
         }        
         
-        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_POSITION,new float[]{2f,2f,-2f,0f},0);      
+        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_POSITION,new float[]{2f,2f,-2f,1},0);      
         
         gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
+        
         
         glu.gluPerspective(
             90,
             this.getAspectRatio(),
             this.getRenderDistance(),
-            1
+            0
         );
         glu.gluLookAt(
             //Camera Location

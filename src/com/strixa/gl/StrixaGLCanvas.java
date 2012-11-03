@@ -5,6 +5,8 @@
 package com.strixa.gl;
 
 import com.jogamp.opengl.util.FPSAnimator;
+
+import javax.media.opengl.DebugGL2;
 import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCapabilities;
@@ -92,12 +94,11 @@ public abstract class StrixaGLCanvas extends GLCanvas implements GLEventListener
     }
     
     public void init(GLAutoDrawable drawable){
-        final GL2 gl = (GL2)drawable.getGL();
+        drawable.setGL(new DebugGL2(drawable.getGL().getGL2()));
+        final GL2 gl = drawable.getGL().getGL2();
         
         
-        gl.glEnable(GL2.GL_DEPTH_TEST);
-        gl.glDepthFunc(GL2.GL_LEQUAL);
-        gl.glClearColor(0f,0f,0f,1f);
+        gl.glClearColor(1f,0f,0f,1f);
         gl.setSwapInterval(1);
         
         
