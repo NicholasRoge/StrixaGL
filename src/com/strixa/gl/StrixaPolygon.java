@@ -17,13 +17,12 @@ import com.strixa.util.Point3D;
  * @author Nicholas Rogé
  */
 public class StrixaPolygon{    
-    private final Point3D<Double>       __coordinates = new Point3D<Double>(0.0,0.0,0.0);
     private final List<Vertex>          __normal_points = new ArrayList<Vertex>();
     private final List<Vertex>          __points = new ArrayList<Vertex>();
     private final List<Vertex>          __texture_points = new ArrayList<Vertex>();
-    private final List<Strixa3DElement> __parents = new ArrayList<Strixa3DElement>();
     
-    private Cuboid         __bounding_box;
+    private Cuboid          __bounding_box;
+    private Strixa3DElement __parent;
     
     
     /*Begin Constructors*/
@@ -31,10 +30,14 @@ public class StrixaPolygon{
      * Constructs the polygon.
      */
     public StrixaPolygon(){
+        this.__bounding_box = new Cuboid(
+            new Vertex(0,0,0,0),
+            0,0,0
+        );
     }
     /*End Constructors*/
     
-    /*Begin Getter/Setter Methods*/
+    /*Begin Getter/Setter Methods*/    
     /**
      * Gets the box which completely and exactly encloses all of this polygon.
      * 
@@ -55,6 +58,7 @@ public class StrixaPolygon{
     
     /**
      * Gets the list of coordinate points associated with this object.<br />
+     * <strong>Note:</strong>  This list of points is relative to this polygon.
      * 
      * @return The list of coordinate points.
      */
@@ -78,16 +82,16 @@ public class StrixaPolygon{
      * @return This polygons's current location.
      */
     public Point3D<Double> getCoordinates(){
-        return this.__coordinates;
+        return this.getBoundingBox().getCoordinates();
     }
     
     /**
-     * Gets an array of {@link Strixa3DElement} to which this polygon is associated.
+     * Gets the {@link Strixa3DElement} to which this polygon is associated.
      * 
-     * @return An array of {@link Strixa3DElement} to which this polygon is associated.
+     * @return The {@link Strixa3DElement} to which this polygon is associated.
      */
-    public Strixa3DElement[] getParents(){
-        return this.__parents.toArray(new Strixa3DElement[this.__parents.size()]);
+    public Strixa3DElement getParent(){
+        return this.__parent;
     }
     
     /**
@@ -107,7 +111,17 @@ public class StrixaPolygon{
      * @param z Z coordinate.
      */
     public void setCoordinates(double x,double y,double z){
-        this.__coordinates.setPoint(x,y,z);
+        this.getCoordinates().setPoint(x,y,z);
+    }
+    
+    /**
+     * Adds a {@link Strixa3DElement} to this polygon, enabling it to communicate with it's parent.<br />
+     * <strong>Note:</strong>  This method should typically only be called internally by Strixa3DElement.
+     * 
+     * @param parent Parent element.
+     */
+    public void setParent(Strixa3DElement parent){
+        this.__parent = parent;
     }
     /*End Getter/Setter Methods*/
     
@@ -131,18 +145,6 @@ public class StrixaPolygon{
     }
     
     /**
-     * Adds a {@link Strixa3DElement} to this polygon, enabling it to communicate with it's parent.<br />
-     * <strong>Note:</strong>  This method should typically only be called internally by Strixa3DElement.
-     * 
-     * @param parent Parent element.
-     */
-    public void addParent(Strixa3DElement parent){
-        if(!this.__parents.contains(parent)){
-            this.__parents.add(parent);
-        }
-    }
-    
-    /**
      * Adds a point to this polygon.
      * 
      * @param point Point to be added.
@@ -159,7 +161,9 @@ public class StrixaPolygon{
      * @param points Point list to be added.
      */
     public void addPoints(List<Vertex> points){
-        this.__points.addAll(points);
+        for(int index = 0,end_index = points.size() - 1;index <= end_index;index++){
+            this.__points.add(points.get(index));
+        }
         
         this.invalidate();
     }
@@ -188,8 +192,8 @@ public class StrixaPolygon{
     public void invalidate(){
         this._regenerateBoundingBox();
         
-        for(int index = 0,end_index = this.__parents.size() - 1;index <= end_index;index++){
-            this.__parents.get(index).invalidate();
+        if(this.__parent != null){
+            this.__parent.invalidate();
         }
     }
     
@@ -260,36 +264,26 @@ public class StrixaPolygon{
      */
     protected void _regenerateBoundingBox(){
         final List<Vertex>      points = this.getPoints();
-        final int               point_count = points.size();
-        final Point3D<Double>   this_coordinates = this.getCoordinates();
         
-        Vertex coordinates = null;
+        Vertex point = null;
         double          depth = 0.0;
         double          height = 0.0;
         double          width = 0.0;
         
         
-        if(!this.getPoints().isEmpty()){
-            width = this_coordinates.getX();
-            height = this_coordinates.getY();
-            depth = this_coordinates.getZ();
-            
-            for(int index = 0;index < point_count;index++){
-                coordinates = points.get(index);
+        if(!points.isEmpty()){            
+            for(int index = 0,end_index = points.size() - 1;index <= end_index;index++){
+                point = points.get(index);
                 
                 
-                width = Math.max(width,coordinates.getX());
-                height = Math.max(height,coordinates.getY());
-                depth = Math.max(depth,coordinates.getZ());
+                width = Math.max(width,point.getX());
+                height = Math.max(height,point.getY());
+                depth = Math.max(depth,point.getZ());
             }
-            
-            width -= this_coordinates.getX();
-            height -= this_coordinates.getY();
-            depth -= this_coordinates.getZ();
         }
         
         this.__bounding_box = new Cuboid(
-            new Point3D<Double>(this_coordinates),
+            new Point3D<Double>(this.getCoordinates()),
             width,
             height,
             depth
@@ -306,17 +300,6 @@ public class StrixaPolygon{
             this.__points.remove(point);
             
             this.invalidate();
-        }
-    }
-    
-    /**
-     * Removes the requested parent from the polygon.
-     * 
-     * @param parent Parent to be removed.
-     *///See also:  PPA, the Polygon Protection Agency.
-    public void removeParent(Strixa3DElement parent){
-        if(this.__parents.contains(parent)){
-            this.__parents.remove(parent);
         }
     }
 

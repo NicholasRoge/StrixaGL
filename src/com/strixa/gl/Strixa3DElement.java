@@ -10,10 +10,12 @@ import java.util.List;
 
 import javax.media.opengl.GL2;
 import javax.media.opengl.GLContext;
+import javax.media.opengl.GLException;
 
 import com.strixa.gl.properties.Cuboid;
 import com.strixa.gl.util.Vertex;
 import com.strixa.util.Dimension3D;
+import com.strixa.util.Log;
 import com.strixa.util.Point3D;
 
 
@@ -22,9 +24,12 @@ import com.strixa.util.Point3D;
  *
  * @author Nicholas Rogé
  */
-public class Strixa3DElement extends StrixaGLElement{    
+public class Strixa3DElement extends StrixaGLElement{ 
+    public enum CollisionDetectionMethod{
+        BOUNDING_BOX
+    }
+    
     private final List<StrixaPolygon>   __components = new ArrayList<StrixaPolygon>();
-    private final Point3D<Double>       __coordinates = new Point3D<Double>(0.0,0.0,0.0);
     
     private Cuboid         __bounding_box;
     private Integer        __list_index;
@@ -37,8 +42,10 @@ public class Strixa3DElement extends StrixaGLElement{
      */
     public Strixa3DElement(){
         this.__material = new StrixaMaterial();
-        
-        this._regenerateBoundingBox();
+        this.__bounding_box = new Cuboid(
+            new Point3D<Double>(0.0,0.0,0.0),
+            0,0,0
+        );
     }
     /*End Constructor*/
     
@@ -62,7 +69,7 @@ public class Strixa3DElement extends StrixaGLElement{
     }
     
     public Point3D<Double> getCoordinates(){        
-        return this.__coordinates;
+        return this.getBoundingBox().getCoordinates();
     }
     
     public Dimension3D<Double> getDimensions(){
@@ -110,6 +117,7 @@ public class Strixa3DElement extends StrixaGLElement{
      */
     public void addComponent(StrixaPolygon polygon){
         if(!this.__components.contains(polygon)){
+            polygon.setParent(this);
             this.__components.add(polygon);
         }
         
@@ -122,11 +130,9 @@ public class Strixa3DElement extends StrixaGLElement{
      * @param polygon_list Polygons to be added.
      */
     public void addComponents(List<StrixaPolygon> polygons){
-        int polygon_count = polygons.size();
-        
-        
-        for(int index = 0;index < polygon_count;index++){
-            if(!this.__components.contains(polygons.get(index))){
+        for(int index = 0,end_index = polygons.size() - 1;index <= end_index;index++){
+            if(!this.__components.contains(polygons)){
+                polygons.get(index).setParent(this);
                 this.__components.add(polygons.get(index));
             }
         }
@@ -135,11 +141,21 @@ public class Strixa3DElement extends StrixaGLElement{
     }
     
     public void draw(GL2 gl){        
+        if(this.__material.hasTexture()){
+            if(!this.__material.isTextureLoaded()){
+                try{
+                    this.__material.loadTexture();
+                }catch(IOException e){
+                    Log.logEvent(Log.Type.WARNING,"Texture could not be loaded, and will not be displayed.");
+                }
+            }
+        }
+        
         if(this.__list_index == null){
             this.__list_index = gl.glGenLists(1);
             gl.glNewList(this.__list_index,GL2.GL_COMPILE);
             
-            this._drawComponents(this.getComponents());
+            this._drawComponents(gl,this.getComponents(),this.__material);
             
             gl.glEndList();
         }
@@ -153,9 +169,27 @@ public class Strixa3DElement extends StrixaGLElement{
      * 
      * @param component Component to be drawn.
      */
-    protected void _drawComponent(StrixaPolygon component){
+    protected void _drawComponent(GL2 gl,StrixaPolygon component){
+        /*Begin Parameter Verification*/
+        if(gl == null){
+            try{
+                gl = GLContext.getCurrentGL().getGL2();
+            }catch(GLException e){
+                Log.logEvent(Log.Type.WARNING,"Attempt was made to draw a polygon with no GLContext available.");
+                
+                return;
+            }
+        }
+        
+        if(component == null){
+            Log.logEvent(Log.Type.WARNING,"Attempt was made to draw empty polygon.");
+            
+            return;
+        }
+        /*End Parameter Verification*/
+        
+        
         final List<Vertex> coordinate_points = component.getPoints();
-        final GL2          gl = GLContext.getCurrentGL().getGL2();
         final List<Vertex> normal_points = component.getNormalPoints();
         final List<Vertex> texture_points = component.getTexturePoints();
         
@@ -163,11 +197,12 @@ public class Strixa3DElement extends StrixaGLElement{
         gl.glPushMatrix();
         gl.glTranslated(component.getCoordinates().getX(),component.getCoordinates().getY(),component.getCoordinates().getZ());
         
-        switch(component.getPoints().size()){
+        switch(coordinate_points.size()){
             case 0:
             case 1:
             case 2:
-                throw new RuntimeException("You must add at least 3 points to a polygon in order for it to be drawn.");
+                Log.logEvent(Log.Type.WARNING,"You must add at least 3 points to a polygon in order for it to be drawn.");
+                return;
             case 3:
                 gl.glBegin(GL2.GL_TRIANGLES);
                 break;
@@ -211,47 +246,38 @@ public class Strixa3DElement extends StrixaGLElement{
      * 
      * @param components Components to be drawn.
      */
-    protected void _drawComponents(List<StrixaPolygon> components){
-        final GL2             gl = GLContext.getCurrentGL().getGL2();
+    protected void _drawComponents(GL2 gl,List<StrixaPolygon> components,StrixaMaterial material){
         final Point3D<Double> this_coordinates = this.getCoordinates();
         
         
         gl.glPushMatrix();
         gl.glTranslated(this_coordinates.getX(),this_coordinates.getY(),this_coordinates.getZ());     
-
-        if(this.__material.hasTexture()){
-            if(!this.__material.isTextureLoaded()){
-                try{
-                    this.__material.loadTexture();
-                }catch(IOException e){
-                    System.out.println("Error:  Could not load requested texture.");
-                }
-            }
-
-            if(this.__material.isTextureLoaded()){  //We're adding a second if here to make sure that if the material for some reason couldn't be loaded, we don't try to bind to it still.
-                this.__material.getTexture().bind(gl);
-                this.__material.getTexture().enable(gl);
-                
-                gl.glTexEnvf(GL2.GL_TEXTURE_ENV,GL2.GL_TEXTURE_ENV_MODE,GL2.GL_MODULATE);
-                gl.glTexParameterf(GL2.GL_TEXTURE_2D,GL2.GL_TEXTURE_WRAP_S,GL2.GL_REPEAT);
-                gl.glTexParameterf(GL2.GL_TEXTURE_2D,GL2.GL_TEXTURE_WRAP_T,GL2.GL_REPEAT);
-            }
+        
+        if(material.isTextureLoaded()){  //We're adding a second if here to make sure that if the material for some reason couldn't be loaded, we don't try to bind to it still.
+            material.getTexture().bind(gl);
+            material.getTexture().enable(gl);
+            
+            gl.glTexEnvf(GL2.GL_TEXTURE_ENV,GL2.GL_TEXTURE_ENV_MODE,GL2.GL_MODULATE);
+            gl.glTexParameterf(GL2.GL_TEXTURE_2D,GL2.GL_TEXTURE_WRAP_S,GL2.GL_REPEAT);
+            gl.glTexParameterf(GL2.GL_TEXTURE_2D,GL2.GL_TEXTURE_WRAP_T,GL2.GL_REPEAT);
         }
         
         if(gl.glIsEnabled(GL2.GL_LIGHTING)){
-            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_AMBIENT,this.__material.getAmbientColor(),0);
-            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_DIFFUSE,this.__material.getDiffuseColor(),0);
-            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_DIFFUSE,this.__material.getSpecularColor(),0);
+            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_AMBIENT,material.getAmbientColor(),0);
+            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_DIFFUSE,material.getDiffuseColor(),0);
+            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_EMISSION,material.getEmissionColor(),0);
+            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_SPECULAR,material.getSpecularColor(),0);
+            gl.glMaterialfv(GL2.GL_FRONT_AND_BACK,GL2.GL_SHININESS,new float[]{material.getSpecularCoefficient()},0);
         }else{
-            gl.glColor3fv(this.__material.getDiffuseColor(),0);  //This is just a temporary set up for right now.
+            gl.glColor3fv(material.getDiffuseColor(),0);  //This is just a temporary set up for right now.
         }
         
         for(int component_index = 0,component_end_index = components.size();component_index < component_end_index;component_index++){
-            this._drawComponent(components.get(component_index));
+            this._drawComponent(gl,components.get(component_index));
         }
         
-        if(this.__material.isTextureLoaded()){
-            this.__material.getTexture().disable(gl);
+        if(material.isTextureLoaded()){
+            material.getTexture().disable(gl);
         }
         
         gl.glPopMatrix();
@@ -273,19 +299,72 @@ public class Strixa3DElement extends StrixaGLElement{
      * @return Returns true if this object is colliding with the given object, and false, otherwise. 
      */
     public boolean isColliding(Strixa3DElement element){        
+        return this.isColliding(element,CollisionDetectionMethod.BOUNDING_BOX);
+    }
+    
+    /**
+     * Method to check for collision with another object.
+     * 
+     * @param element Element who you're trying to detect if this object is colliding with.
+     * @param method Method of collision detection to use.
+     * 
+     * @return Returns true if this object is colliding with the given object, and false, otherwise. 
+     */
+    public boolean isColliding(Strixa3DElement element,CollisionDetectionMethod method){        
         List<StrixaPolygon> element_components = element.getComponents();
         List<StrixaPolygon> this_components = this.getComponents(); 
         
         
-        for(int this_index = 0,this_end_index = this_components.size() - 1;this_index <= this_end_index;this_index++){
-            for(int element_index = 0,element_end_index = element_components.size();element_index <= element_end_index;element_index++){
-                if(this.__components.get(this_index).isColliding(element_components.get(element_index))){
+        switch(method){
+            case BOUNDING_BOX:
+                double e1_min_x = this.getBoundingBox().getCoordinates().getX();
+                double e1_min_y = this.getBoundingBox().getCoordinates().getY();
+                double e1_min_z = this.getBoundingBox().getCoordinates().getZ();
+                double e1_max_x = this.getBoundingBox().getCoordinates().getX() + this.getBoundingBox().getWidth();
+                double e1_max_y = this.getBoundingBox().getCoordinates().getY() + this.getBoundingBox().getHeight();
+                double e1_max_z = this.getBoundingBox().getCoordinates().getZ() + this.getBoundingBox().getDepth();
+                double e2_min_x = element.getBoundingBox().getCoordinates().getX();
+                double e2_min_y = element.getBoundingBox().getCoordinates().getY();
+                double e2_min_z = element.getBoundingBox().getCoordinates().getZ();
+                double e2_max_x = element.getBoundingBox().getCoordinates().getX() + element.getBoundingBox().getWidth();
+                double e2_max_y = element.getBoundingBox().getCoordinates().getY() + element.getBoundingBox().getHeight();
+                double e2_max_z = element.getBoundingBox().getCoordinates().getZ() + element.getBoundingBox().getDepth();
+                
+                
+                if(
+                    (
+                        (e1_max_x >= e2_min_x && e1_max_x <= e2_max_x)
+                        ||
+                        (e2_max_x >= e1_min_x && e2_max_x <= e1_max_x)
+                    )
+                    &&
+                    (
+                        (e1_max_y >= e2_min_y && e1_max_y <= e2_max_y)
+                        ||
+                        (e2_max_y >= e1_min_y && e2_max_y <= e1_max_y)
+                    )
+                    &&
+                    (
+                        (e1_max_z >= e2_min_z && e1_max_z <= e2_max_z)
+                        ||
+                        (e2_max_z >= e1_min_z && e2_max_z <= e1_max_z)
+                    )
+                ){
                     return true;
+                }else{
+                    return false;
                 }
-            }
+            default:
+                for(int this_index = 0,this_end_index = this_components.size() - 1;this_index <= this_end_index;this_index++){
+                    for(int element_index = 0,element_end_index = element_components.size();element_index <= element_end_index;element_index++){
+                        if(this.__components.get(this_index).isColliding(element_components.get(element_index))){
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
         }
-        
-        return false;
     }
     
     /**
@@ -296,6 +375,10 @@ public class Strixa3DElement extends StrixaGLElement{
      * @return Returns true if this element is visible and should be drawn, and false, otherwise.
      */
     public boolean isVisible(StrixaGLContext context){
+        if(!super.isVisible(context)){
+            return false;
+        }
+        
         final Cuboid          bounding_box = this.getBoundingBox();
         final Point3D<Double> bounding_box_coordinates = bounding_box.getCoordinates();
         final Cuboid          viewable_area = context.getViewableArea();
@@ -360,7 +443,6 @@ public class Strixa3DElement extends StrixaGLElement{
         
         double            depth = 0.0;
         double            height = 0.0;
-        int               point_count = 0;
         List<Vertex>      points = null;
         double            width = 0.0;
         
@@ -372,18 +454,13 @@ public class Strixa3DElement extends StrixaGLElement{
             
             for(int polygon_index = 0;polygon_index < polygon_count;polygon_index++){
                 points = polygons.get(polygon_index).getPoints();
-                point_count = points.size();
                 
-                for(int point_index = 0;point_index < point_count;point_index++){
-                    width = Math.max(width,points.get(point_index).getX());
-                    height = Math.max(height,points.get(point_index).getY());
-                    depth = Math.max(depth,points.get(point_index).getZ());
+                for(int index = 0,end_index = points.size() - 1;index < end_index;index++){
+                    width = Math.max(width,points.get(index).getX());
+                    height = Math.max(height,points.get(index).getY());
+                    depth = Math.max(depth,points.get(index).getZ());
                 }
             }
-            
-            width -= this_coordinates.getX();
-            height -= this_coordinates.getY();
-            depth -= this_coordinates.getZ();
         }
         
         this.__bounding_box = new Cuboid(

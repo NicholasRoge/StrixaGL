@@ -17,6 +17,7 @@ import com.strixa.util.Point;
  */
 public abstract class StrixaGLElement{
     private boolean __collision_detection_enabled;
+    private boolean __visible;
     
     
     /*Begin Constructors*/
@@ -25,6 +26,7 @@ public abstract class StrixaGLElement{
      **/
     public StrixaGLElement(){
         this.__collision_detection_enabled = true;
+        this.__visible = true;
     }
     /*End Constructors*/
     
@@ -45,6 +47,15 @@ public abstract class StrixaGLElement{
      */
     public void setCollisionDetectionEnabled(boolean enabled){
         this.__collision_detection_enabled = enabled;
+    }
+    
+    /**
+     * Sets the visibility of this object.
+     * 
+     * @param visible This should be true if the object should be displayed when drawing, and false, otherwise.
+     */
+    public void setVisible(boolean visible){
+        this.__visible = visible;
     }
     /*End Getter/Setter Methods*/
     
@@ -78,7 +89,9 @@ public abstract class StrixaGLElement{
      * 
      * @return Returns true if this object is visible, and false, otherwise.
      */
-    public abstract boolean isVisible(StrixaGLContext context);
+    public boolean isVisible(StrixaGLContext context){
+        return this.__visible;
+    }
     
     /**
      * Gets this object's coordinates.

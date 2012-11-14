@@ -67,8 +67,11 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
         
         gl.glClearDepth(1);
         
-        /*gl.glShadeModel(GL2.GL_SMOOTH);
-        gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT,GL2.GL_NICEST);*/
+        gl.glShadeModel(GL2.GL_SMOOTH);
+        gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT,GL2.GL_NICEST);
+        
+        gl.glEnable(GL2.GL_BLEND);
+        gl.glBlendFunc(GL2.GL_SRC_ALPHA,GL2.GL_ONE_MINUS_SRC_ALPHA);
         
         gl.glEnable(GL2.GL_LIGHT0);
         gl.glEnable(GL2.GL_LIGHTING);  
@@ -251,36 +254,35 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
             return;
         }        
         
-        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_POSITION,new float[]{2f,2f,-2f,1},0);      
+        gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_POSITION,new float[]{5f,5f,-5f,1},0);      
         
         gl.glMatrixMode(GL2.GL_PROJECTION);
         gl.glLoadIdentity();
         
-        
         glu.gluPerspective(
-            90,
+            45,
             this.getAspectRatio(),
-            this.getRenderDistance(),
-            0
+            0.001f,  //In other words, don't stop drawing until you are essentially at the viewer.  Note:  Can't set this value to zero or severe polygon "glitching" occurs.  TODO:  Find out why.
+            this.getRenderDistance()
         );
 
         gl.glMatrixMode(GL2.GL_MODELVIEW);
         gl.glLoadIdentity();
         
         glu.gluLookAt(
-                //Camera Location
-                this.__camera_location.getX(),
-                this.__camera_location.getY(),
-                this.__camera_location.getZ(),
-                //Looking at what?
-                this.__camera_looking_at_point.getX(),
-                this.__camera_looking_at_point.getY(),
-                this.__camera_looking_at_point.getZ(),
-                //Where is up?
-                0,
-                1,
-                0
-            );
+            //Camera Location
+            this.__camera_location.getX(),
+            this.__camera_location.getY(),
+            this.__camera_location.getZ(),
+            //Looking at what?
+            this.__camera_looking_at_point.getX(),
+            this.__camera_looking_at_point.getY(),
+            this.__camera_looking_at_point.getZ(),
+            //Where is up?
+            0,
+            1,
+            0
+        );
         
         
         
@@ -328,7 +330,7 @@ public abstract class Strixa3DCanvas extends StrixaGLCanvas implements MouseMoti
     
     protected void _refreshCamera(){        
         this.__camera_looking_at_point.setX(this.__camera_location.getX()+Math.sin((this.getCameraRotation()*Math.PI)/180));
-        this.__camera_looking_at_point.setY(0.0);
+        this.__camera_looking_at_point.setY(this.__camera_location.getY());
         this.__camera_looking_at_point.setZ(this.__camera_location.getZ()+Math.cos((this.getCameraRotation()*Math.PI)/180));
     }
     

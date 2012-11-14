@@ -14,6 +14,8 @@ import com.strixa.gl.Strixa3DElement;
 import com.strixa.gl.StrixaMaterial;
 import com.strixa.gl.StrixaPolygon;
 import com.strixa.util.FileIO;
+import com.strixa.util.Log;
+import com.strixa.util.Point3D;
 
 
 /**
@@ -398,7 +400,9 @@ public class WavefrontObjReader implements Runnable{
     }
     
     public void run(){
+        //Well this is just a clusterfuck of nasty.  TODO_HIGH:  Revamp this.
     	Command.CommandObject command = null;
+    	Point3D<Double>       coordinates = null;
         Strixa3DElement       current_element = null;
         FileInputStream       file_stream = null;
         double                last_update = 0;
@@ -466,16 +470,23 @@ public class WavefrontObjReader implements Runnable{
                     	        current_element = new Strixa3DElement();
                     	    }else{
                     	        current_element = new Strixa3DElement();
-                    	    }
+                    	    }                    	    
                     	    this.__objects.add(current_element);
+                    	    
+                    	    coordinates = current_element.getCoordinates();
                 	    }
                 	    break;
                 	case DEFINE_VERTEX:
                 	    {
+                	        boolean coordinates_changed = false;
+                	        Vertex vertex = null;
                     	    double x = 0;
                     	    double y = 0;
                     	    double z = 0;
                     	    double w = 1;
+                    	    double x_delta = 0;
+                    	    double y_delta = 0;
+                    	    double z_delta = 0;
                     	    
                     	    
                     	    if(command.getParameterCount() < 2 || command.getParameterCount() > 3){
@@ -488,6 +499,53 @@ public class WavefrontObjReader implements Runnable{
                     	        z = Double.parseDouble(command.getParameters()[2]);
                     	        if(command.getParameterCount() > 3){
                     	            w = Double.parseDouble(command.getParameters()[3]);
+                    	        }
+                    	    }
+                    	    
+                    	    if(vertices.isEmpty()){
+                    	        coordinates.setPoint(x,y,z);
+                    	        
+                    	        x = 0;
+                    	        y = 0;
+                    	        z = 0;
+                    	    }else{
+                    	        if(x < coordinates.getX()){
+                    	            x_delta = coordinates.getX() - x;
+                    	            coordinates.setX(x);
+                    	            x = 0;
+                    	            
+                    	            coordinates_changed = true;
+                    	        }else{
+                    	            x -= coordinates.getX();
+                    	        }
+                    	        if(y < coordinates.getY()){
+                                    y_delta = coordinates.getY() - y;
+                                    coordinates.setY(y);
+                                    y = 0;
+                                    
+                                    coordinates_changed = true;
+                                }else{
+                                    y -= coordinates.getY();
+                                }
+                    	        if(z < coordinates.getZ()){
+                                    z_delta = coordinates.getZ() - z;
+                                    coordinates.setZ(z);
+                                    z = 0;
+                                    
+                                    coordinates_changed = true;
+                                }else{
+                                    z -= coordinates.getZ();
+                                }
+                    	        
+                    	        if(coordinates_changed){
+                    	            for(int index = 0,end_index = vertices.size() - 1;index <= end_index;index++){
+                    	                vertex = vertices.get(index);
+                    	                vertex.setPoint(
+                    	                    vertex.getX() + x_delta,
+                    	                    vertex.getY() + y_delta,
+                    	                    vertex.getZ() + z_delta
+                    	                );
+                    	            }
                     	        }
                     	    }
                     	    
@@ -603,7 +661,7 @@ public class WavefrontObjReader implements Runnable{
                 }
             }
         }catch(FileNotFoundException e){
-            throw new RuntimeException("No such file was found in the given path:  " + obj_file_handle.getAbsolutePath());
+            Log.logEvent(Log.Type.ERROR,"No such file was found in the given path:  " + obj_file_handle.getAbsolutePath());
         }catch(IOException e){
             RuntimeException exception = null; 
             
@@ -626,11 +684,13 @@ public class WavefrontObjReader implements Runnable{
     /**
      * Gets the {@link Strixa3DElements} that were read in using this tool.
      * 
-     * @return The {@link Strixa3DElements} that were read in using this tool.
+     * @return The {@link Strixa3DElements} that were read in using this tool, or null, if this method is called before the {@link WavefrontObjReader#read} method.
      */
     public Strixa3DElement[] getElements(){
         if(!this.__file_read){
-            throw new RuntimeException("You must first call read on this object to read from the file.");
+            Log.logEvent(Log.Type.WARNING,"You must first call the read method on this object before attempting to retrive it's elements.");
+            
+            return null;
         }
         
         return this.__objects.toArray(new Strixa3DElement[this.__objects.size()]);

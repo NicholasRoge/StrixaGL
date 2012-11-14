@@ -27,6 +27,7 @@ public class StrixaMaterial{
     Float                 __alpha;
     float[]               __ambient_color;
     float[]               __diffuse_color;
+    float[]               __emission_color;
     String                __name;
     float[]               __specular_color;
     float                 __specular_coefficient;
@@ -38,6 +39,7 @@ public class StrixaMaterial{
         this.__alpha = 1f;
         this.__ambient_color = new float[]{0f,0f,0f,1f};
         this.__diffuse_color = new float[]{1f,1f,1f,1f};
+        this.__emission_color = new float[]{0f,0f,0f,1f};
         this.__specular_color = new float[]{1f,1f,1f,1f};
         this.__specular_coefficient = 0f;
         this.__texture = null;
@@ -94,6 +96,15 @@ public class StrixaMaterial{
      */
     public float[] getDiffuseColor(){
         return this.__diffuse_color;
+    }
+    
+    /**
+     * Gets the material's emission color.
+     * 
+     * @return The material's emission color.
+     */
+    public float[] getEmissionColor(){
+        return this.__emission_color;
     }
     
     /**
@@ -193,6 +204,7 @@ public class StrixaMaterial{
         
         this.__ambient_color[3] = alpha;
         this.__diffuse_color[3] = alpha;
+        this.__emission_color[3] = alpha;
         this.__specular_color[3] = alpha;
     }
     
@@ -239,6 +251,51 @@ public class StrixaMaterial{
         this.__diffuse_color[0] = red;
         this.__diffuse_color[1] = green;
         this.__diffuse_color[2] = blue;
+    }
+    
+    /**
+     * Sets the material's emission color. 
+     * 
+     * @param color The material's emission color as a float array with length 3.  Each element represents a red, green, or blue component of the color where a value of 0 indicates no intensity, and 1 indicates full intensity.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if:
+     * <ul>
+     *     <li>Argument 'color' is null.</li>
+     *     <li>Argument 'color' does not have exactly 3 elements.</li>
+     *     <li>Any of the given colors value's are less than 0 or greater than 1.</li>
+     * </ul>
+     */
+    public void setEmissionColor(float[] color){
+        if(color == null || color.length != 3){
+            throw new IllegalArgumentException();
+        }
+        
+        this.setEmissionColor(color[0],color[1],color[2]);
+    }
+    
+    /**
+     * Sets the material's emission color.
+     * 
+     * @param red Red component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param green Green component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * @param blue Blue component of the color, where 0 indicates no intensity, and 1 indicates full intensity of the color.
+     * 
+     * @throws IllegalArgumentException An IllegalArgumentException will be thrown if any of the given colors value's are less than 0 or greater than 1.
+     */
+    public void setEmissionColor(float red,float green,float blue){
+        if(
+            red < 0 || red > 1
+            ||
+            green < 0 || green > 1
+            ||
+            blue < 0 || blue > 1
+        ){
+            throw new IllegalArgumentException();
+        }
+        
+        this.__emission_color[0] = red;
+        this.__emission_color[1] = green;
+        this.__emission_color[2] = blue;
     }
     
     /**
